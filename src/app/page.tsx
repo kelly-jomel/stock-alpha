@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import StockChart from '@/components/StockChart';
 import InvestorDashboard from '@/components/InvestorDashboard';
 import KeyStockScanner from '@/components/KeyStockScanner';
@@ -16,23 +16,77 @@ import {
   Wallet,
   LineChart,
   Sliders,
-  BookOpen,
   Search,
   Activity,
   Layers,
-  ChevronDown
+  BookOpen,
+  Play,
+  RotateCcw,
+  Zap,
+  TrendingUp,
+  ShieldCheck,
+  Award,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 
 export default function Home() {
   const [selectedSymbol, setSelectedSymbol] = useState<string>('RELIANCE.NS');
-  const [activeTab, setActiveTab] = useState<'explore' | 'recommendations' | 'portfolio' | 'terminal' | 'screener'>('explore');
+  const [activeTab, setActiveTab] = useState<'explore' | 'recommendations' | 'portfolio' | 'screener' | 'terminal' | 'keystocks-lab'>('explore');
   const [loading, setLoading] = useState<boolean>(true);
   const [range, setRange] = useState<string>('1y');
-  const [interval, setInterval] = useState<string>('1d');
+  const [chartInterval, setChartInterval] = useState<string>('1d');
   const [quote, setQuote] = useState<StockQuote | null>(null);
   const [candles, setCandles] = useState<Candle[]>([]);
   const [technicals, setTechnicals] = useState<TechnicalIndicators | null>(null);
   const [investorScores, setInvestorScores] = useState<InvestorScores | null>(null);
+
+  // Search input in header (Groww style clean search bar)
+  const [headerSearchQuery, setHeaderSearchQuery] = useState('');
+  const [headerSearchResults, setHeaderSearchResults] = useState<Array<{ symbol: string; name: string; sector: string }>>([]);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  // Bar Replay state for KeyStocks backtester
+  const [replayIdx, setReplayIdx] = useState<number>(-1);
+  const [isReplaying, setIsReplaying] = useState(false);
+
+  // Close search dropdown on click outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setIsSearchOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Live search handler
+  useEffect(() => {
+    if (!headerSearchQuery.trim()) {
+      setHeaderSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(headerSearchQuery)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setHeaderSearchResults(data.results || []);
+        }
+      } catch {
+        // fallback to universe match
+        const local = STOCK_UNIVERSE.filter(s =>
+          s.symbol.toLowerCase().includes(headerSearchQuery.toLowerCase()) ||
+          s.name.toLowerCase().includes(headerSearchQuery.toLowerCase())
+        );
+        setHeaderSearchResults(local);
+      }
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [headerSearchQuery]);
 
   // Fetch full data for selected symbol
   useEffect(() => {
@@ -40,7 +94,7 @@ export default function Home() {
     async function loadData() {
       setLoading(true);
       try {
-        const res = await fetch(`/api/stock?symbol=${encodeURIComponent(selectedSymbol)}&range=${range}&interval=${interval}`);
+        const res = await fetch(`/api/stock?symbol=${encodeURIComponent(selectedSymbol)}&range=${range}&interval=${chartInterval}`);
         if (res.ok) {
           const data = await res.json();
           if (!isCancelled) {
@@ -48,6 +102,8 @@ export default function Home() {
             setCandles(data.candles);
             setTechnicals(data.technicals);
             setInvestorScores(data.investorScores);
+            setReplayIdx(-1);
+            setIsReplaying(false);
           }
         }
       } catch (err) {
@@ -60,24 +116,47 @@ export default function Home() {
     return () => {
       isCancelled = true;
     };
-  }, [selectedSymbol, range, interval]);
+  }, [selectedSymbol, range, chartInterval]);
+
+  // Bar Replay simulator timer
+  useEffect(() => {
+    let timerId: ReturnType<typeof setInterval> | undefined;
+    if (isReplaying && replayIdx < candles.length - 1) {
+      timerId = setInterval(() => {
+        setReplayIdx((prev: number) => {
+          if (prev >= candles.length - 1) {
+            setIsReplaying(false);
+            return prev;
+          }
+          return prev + 1;
+        });
+      }, 700);
+    }
+    return () => {
+      if (timerId) clearInterval(timerId);
+    };
+  }, [isReplaying, replayIdx, candles.length]);
 
   const handleTimeframeChange = (newRange: string, newInterval: string) => {
     setRange(newRange);
-    setInterval(newInterval);
+    setChartInterval(newInterval);
   };
 
   const handleSelectStock = (sym: string) => {
     setSelectedSymbol(sym);
     setActiveTab('terminal');
+    setIsSearchOpen(false);
+    setHeaderSearchQuery('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const activeCandles = replayIdx >= 0 ? candles.slice(0, replayIdx + 1) : candles;
+
   return (
     <div className="min-h-screen bg-slate-50/60 text-slate-900 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
-      {/* Modern Clean Header (Groww aesthetic) */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-6 py-3">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
+      {/* Modern Clean Header (De-cluttered Groww aesthetic - NO top-right select dropdown) */}
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-6 py-2.5">
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-6">
           {/* Logo & Brand Name */}
           <div
             onClick={() => setActiveTab('explore')}
@@ -90,17 +169,78 @@ export default function Home() {
               <div className="flex items-center gap-1.5">
                 <span className="font-bold text-lg text-slate-900 tracking-tight">Stock Alpha</span>
                 <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold uppercase">
-                  NSE
+                  NSE/BSE
                 </span>
               </div>
             </div>
           </div>
 
+          {/* Integrated Search Bar (Clean pill design, replaces bulky dropdown) */}
+          <div ref={searchContainerRef} className="relative flex-1 max-w-sm hidden sm:block">
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search Indian stocks (e.g. Reliance, TCS, HDFC)..."
+                value={headerSearchQuery}
+                onFocus={() => setIsSearchOpen(true)}
+                onChange={(e) => {
+                  setHeaderSearchQuery(e.target.value);
+                  setIsSearchOpen(true);
+                }}
+                className="w-full bg-slate-100/80 hover:bg-slate-100 focus:bg-white border border-slate-200/80 focus:border-emerald-500 rounded-full pl-9 pr-4 py-2 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none transition-all shadow-2xs"
+              />
+            </div>
+
+            {/* Live Autocomplete Dropdown */}
+            {isSearchOpen && (
+              <div className="absolute left-0 right-0 top-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden z-50 divide-y divide-slate-100 max-h-72 overflow-y-auto">
+                {headerSearchResults.length > 0 ? (
+                  headerSearchResults.map((stock) => (
+                    <div
+                      key={stock.symbol}
+                      onClick={() => handleSelectStock(stock.symbol)}
+                      className="px-4 py-2.5 hover:bg-slate-50 cursor-pointer flex items-center justify-between transition-colors group"
+                    >
+                      <div>
+                        <div className="font-bold text-xs text-slate-900 group-hover:text-emerald-600 transition-colors">
+                          {stock.symbol.replace('.NS', '').replace('.BO', '')}
+                        </div>
+                        <div className="text-[11px] text-slate-400">{stock.name}</div>
+                      </div>
+                      <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                        {stock.sector}
+                      </span>
+                    </div>
+                  ))
+                ) : headerSearchQuery ? (
+                  <div className="p-4 text-center text-xs text-slate-400">No matching stocks found</div>
+                ) : (
+                  <div className="p-3">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 mb-1.5">
+                      Popular Indian Scrips
+                    </div>
+                    {STOCK_UNIVERSE.slice(0, 5).map(s => (
+                      <div
+                        key={s.symbol}
+                        onClick={() => handleSelectStock(s.symbol)}
+                        className="px-3 py-1.5 hover:bg-slate-50 rounded-lg cursor-pointer flex items-center justify-between text-xs font-semibold text-slate-700"
+                      >
+                        <span>{s.symbol.replace('.NS', '')}</span>
+                        <span className="text-[10px] text-slate-400">{s.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Clean Top Navigation Links */}
-          <nav className="hidden md:flex items-center gap-1 text-xs font-semibold text-slate-600">
+          <nav className="flex items-center gap-1 text-xs font-semibold text-slate-600 shrink-0">
             <button
               onClick={() => setActiveTab('explore')}
-              className={`px-3.5 py-2 rounded-xl transition-all ${
+              className={`px-3 py-1.5 rounded-xl transition-all ${
                 activeTab === 'explore'
                   ? 'bg-slate-100 text-slate-900 font-bold'
                   : 'hover:text-slate-900 hover:bg-slate-50'
@@ -110,7 +250,7 @@ export default function Home() {
             </button>
             <button
               onClick={() => setActiveTab('recommendations')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all ${
                 activeTab === 'recommendations'
                   ? 'bg-slate-100 text-emerald-700 font-bold'
                   : 'hover:text-slate-900 hover:bg-slate-50'
@@ -120,7 +260,7 @@ export default function Home() {
             </button>
             <button
               onClick={() => setActiveTab('portfolio')}
-              className={`px-3.5 py-2 rounded-xl transition-all ${
+              className={`px-3 py-1.5 rounded-xl transition-all ${
                 activeTab === 'portfolio'
                   ? 'bg-slate-100 text-slate-900 font-bold'
                   : 'hover:text-slate-900 hover:bg-slate-50'
@@ -130,7 +270,7 @@ export default function Home() {
             </button>
             <button
               onClick={() => setActiveTab('screener')}
-              className={`px-3.5 py-2 rounded-xl transition-all ${
+              className={`px-3 py-1.5 rounded-xl transition-all ${
                 activeTab === 'screener'
                   ? 'bg-slate-100 text-slate-900 font-bold'
                   : 'hover:text-slate-900 hover:bg-slate-50'
@@ -140,36 +280,25 @@ export default function Home() {
             </button>
             <button
               onClick={() => setActiveTab('terminal')}
-              className={`px-3.5 py-2 rounded-xl transition-all ${
+              className={`px-3 py-1.5 rounded-xl transition-all ${
                 activeTab === 'terminal'
                   ? 'bg-slate-100 text-slate-900 font-bold'
                   : 'hover:text-slate-900 hover:bg-slate-50'
               }`}
             >
-              Charts &amp; Terminal
+              Terminal
+            </button>
+            <button
+              onClick={() => setActiveTab('keystocks-lab')}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-xl transition-all ${
+                activeTab === 'keystocks-lab'
+                  ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold'
+                  : 'hover:text-indigo-600 hover:bg-indigo-50/50'
+              }`}
+            >
+              <BookOpen className="w-3.5 h-3.5 text-indigo-600" /> KeyStocks Lab
             </button>
           </nav>
-
-          {/* Stock Quick Selector Dropdown */}
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <select
-                value={selectedSymbol}
-                onChange={(e) => {
-                  setSelectedSymbol(e.target.value);
-                  setActiveTab('terminal');
-                }}
-                className="bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-xl px-3.5 py-2 pr-8 text-xs font-semibold text-slate-800 focus:outline-none focus:border-emerald-500 cursor-pointer transition-colors"
-              >
-                {STOCK_UNIVERSE.map((s) => (
-                  <option key={s.symbol} value={s.symbol}>
-                    {s.symbol.replace('.NS', '')} - {s.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-3 pointer-events-none" />
-            </div>
-          </div>
         </div>
       </header>
 
@@ -188,12 +317,12 @@ export default function Home() {
           <RecommendationsView onSelectStock={handleSelectStock} />
         )}
 
-        {/* PAGE 3: Portfolio View */}
+        {/* PAGE 3: Portfolio View (Order history consolidation & holdings import) */}
         {activeTab === 'portfolio' && (
           <PortfolioView onSelectStock={handleSelectStock} />
         )}
 
-        {/* PAGE 4: Quantitative Screener */}
+        {/* PAGE 4: Quantitative & KeyStocks Screener */}
         {activeTab === 'screener' && (
           <KeyStockScanner onSelectStock={handleSelectStock} />
         )}
@@ -238,6 +367,55 @@ export default function Home() {
               </div>
             )}
 
+            {/* KeyStocks Bar Replay Simulator Control Bar */}
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                  <Play className="w-3.5 h-3.5 text-indigo-600" /> KeyStocks Bar Replay Simulator:
+                </span>
+                <span className="text-slate-500">
+                  {replayIdx >= 0 ? `Step ${replayIdx + 1} of ${candles.length} candles` : 'Live Chart Feed'}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    if (replayIdx < 0) {
+                      setReplayIdx(Math.max(10, candles.length - 20));
+                    }
+                    setIsReplaying(!isReplaying);
+                  }}
+                  className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
+                    isReplaying
+                      ? 'bg-amber-500 text-white shadow-xs'
+                      : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs'
+                  }`}
+                >
+                  <Play className="w-3 h-3" />
+                  {isReplaying ? 'Pause Replay' : 'Play Bar Replay'}
+                </button>
+                <button
+                  onClick={() => {
+                    setReplayIdx(prev => Math.min(candles.length - 1, (prev < 0 ? candles.length - 1 : prev) + 1));
+                  }}
+                  disabled={replayIdx < 0 || replayIdx >= candles.length - 1}
+                  className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold disabled:opacity-40"
+                >
+                  Step Next →
+                </button>
+                <button
+                  onClick={() => {
+                    setReplayIdx(-1);
+                    setIsReplaying(false);
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold flex items-center gap-1"
+                >
+                  <RotateCcw className="w-3 h-3" /> Reset to Live
+                </button>
+              </div>
+            </div>
+
             {/* Interactive Candlestick Chart */}
             {loading ? (
               <div className="h-[420px] rounded-2xl bg-white border border-slate-200/80 flex items-center justify-center text-slate-400 animate-pulse text-xs font-medium">
@@ -245,15 +423,20 @@ export default function Home() {
               </div>
             ) : (
               <StockChart
-                candles={candles}
+                candles={activeCandles}
                 technicals={technicals || undefined}
                 symbol={selectedSymbol}
                 onTimeframeChange={handleTimeframeChange}
-                activeInterval={interval}
+                activeInterval={chartInterval}
               />
             )}
 
-            {/* Moving Average & Formations */}
+            {/* 5-Gate Legendary Investor Scoring Model */}
+            {investorScores && (
+              <InvestorDashboard scores={investorScores} />
+            )}
+
+            {/* KeyStocks Moving Average Energy & Formations */}
             {technicals && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs">
@@ -300,31 +483,137 @@ export default function Home() {
                       <div className="font-bold text-rose-600 mt-0.5">₹{technicals.supportResistance.resistances[0] || '-'}</div>
                     </div>
                     <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                      <div className="text-[10px] text-slate-400 uppercase">Support Floor</div>
+                      <div className="text-[10px] text-slate-400 uppercase">Support Level</div>
                       <div className="font-bold text-emerald-600 mt-0.5">₹{technicals.supportResistance.supports[0] || '-'}</div>
                     </div>
                   </div>
                 </div>
               </div>
             )}
+          </div>
+        )}
 
-            {/* 5 Legendary Investor Synthesis Matrix */}
-            {investorScores && (
-              <InvestorDashboard scores={investorScores} />
-            )}
+        {/* PAGE 6: KeyStocks Technical Analysis Reference & Hedge Fund Blueprint */}
+        {activeTab === 'keystocks-lab' && (
+          <div className="space-y-6">
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs">
+              <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+                <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100">
+                  <BookOpen className="w-6 h-6" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-slate-900">KeyStocks Methodology &amp; 5-Gate Blueprint</h1>
+                  <p className="text-xs text-slate-500">
+                    The complete operational synthesis uniting KeyStocks technical analysis algorithms with hedge fund quantitative risk models
+                  </p>
+                </div>
+              </div>
+
+              {/* 4 Pillars of KeyStocks */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-2">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs">
+                    01
+                  </div>
+                  <h3 className="font-bold text-slate-900 text-sm">No-Code Query Scanner</h3>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Unlike TradingView (PineScript) or AmiBroker (AFL), KeyStocks eliminates coding by allowing compound multi-condition technical scans via click &amp; filter.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-2">
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs">
+                    02
+                  </div>
+                  <h3 className="font-bold text-slate-900 text-sm">Harmonics &amp; Wolfe Waves</h3>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Automated Fibonacci 61.8% golden ratios, ABCD measured waves, and 5-point converging falling wedges reaching terminal Point 5 reversal zones.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-2">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">
+                    03
+                  </div>
+                  <h3 className="font-bold text-slate-900 text-sm">MA Energy Convergence</h3>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Evaluates the degree of compression between multiple moving averages (20, 50, 200 EMA) to catch coiled explosive volatility breakouts early.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-2">
+                  <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-xs">
+                    04
+                  </div>
+                  <h3 className="font-bold text-slate-900 text-sm">Bar Replay Backtester</h3>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Step through historical chart candles bar-by-bar to visually test breakout validity and ensure indicator signals do not repaint.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 5 Legendary Investors Reference Framework */}
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs space-y-4">
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <Award className="w-5 h-5 text-indigo-600" /> The 5-Gate Unified Market Synthesis (Legendary Investors)
+              </h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="p-4 rounded-xl bg-amber-50/50 border border-amber-200/70 space-y-1.5">
+                  <div className="font-bold text-amber-900 text-sm flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-amber-600" /> Warren Buffett (Quality Moats)
+                  </div>
+                  <div className="text-[11px] text-amber-700">Filters: ROIC &ge; 15%, Debt/Equity &lt; 0.5, Low PE</div>
+                  <p className="text-xs text-slate-600 leading-relaxed pt-1">
+                    Prioritizes enduring consumer monopolies with pricing power. Eliminates low-margin commodity businesses.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-200/70 space-y-1.5">
+                  <div className="font-bold text-emerald-900 text-sm flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-emerald-600" /> Stanley Druckenmiller (Macro &amp; Trend)
+                  </div>
+                  <div className="text-[11px] text-emerald-700">Filters: Price &gt; 50/200 EMA, RSI 50-68 sweetspot</div>
+                  <p className="text-xs text-slate-600 leading-relaxed pt-1">
+                    Never buys a stock in a downtrend regardless of cheap valuation. Sizes positions aggressively when technicals confirm macro liquidity.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-200/70 space-y-1.5">
+                  <div className="font-bold text-blue-900 text-sm flex items-center gap-2">
+                    <Compass className="w-4 h-4 text-blue-600" /> Ray Dalio (All-Weather Cycles)
+                  </div>
+                  <div className="text-[11px] text-blue-700">Filters: Altman Z &gt; 3.0, Safe deleveraging</div>
+                  <p className="text-xs text-slate-600 leading-relaxed pt-1">
+                    Balances risk across growth/inflation regimes so portfolios survive credit contractions and debt cycles.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-rose-50/50 border border-rose-200/70 space-y-1.5">
+                  <div className="font-bold text-rose-900 text-sm flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-rose-600" /> Michael Burry (Forensic Value)
+                  </div>
+                  <div className="text-[11px] text-rose-700">Filters: Low PB, high FCF yield, forensic audit</div>
+                  <p className="text-xs text-slate-600 leading-relaxed pt-1">
+                    Uncovers deep value opportunities where tangible book value and cash generation protect the downside.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-purple-50/50 border border-purple-200/70 space-y-1.5">
+                  <div className="font-bold text-purple-900 text-sm flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-purple-600" /> Cathie Wood (Exponential Growth)
+                  </div>
+                  <div className="text-[11px] text-purple-700">Filters: Multi-sector technology convergence</div>
+                  <p className="text-xs text-slate-600 leading-relaxed pt-1">
+                    Invests in multi-year innovation platforms (EV, AI, renewables, cloud) experiencing Wright’s Law cost deflation.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </main>
-
-      {/* Clean Subtle Footer */}
-      <footer className="mt-auto border-t border-slate-200 bg-white px-6 py-4 text-center text-xs text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-2">
-        <div className="flex items-center gap-2 font-medium text-slate-600">
-          <span>Stock Alpha</span> &bull; <span>Indian Quantitative Intelligence</span>
-        </div>
-        <div className="text-[11px] text-slate-400">
-          5-Gate Consensus: Buffett, Druckenmiller, Dalio, Burry, Wood &amp; Technical Analytics
-        </div>
-      </footer>
     </div>
   );
 }
