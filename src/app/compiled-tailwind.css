@@ -2065,6 +2065,10 @@
       --tw-ring-color: color-mix(in oklab, var(--color-emerald-500) 30%, transparent);
     }
   }
+  .outline {
+    outline-style: var(--tw-outline-style);
+    outline-width: 1px;
+  }
   .blur-3xl {
     --tw-blur: blur(var(--blur-3xl));
     filter: var(--tw-blur, ) var(--tw-brightness, ) var(--tw-contrast, ) var(--tw-grayscale, ) var(--tw-hue-rotate, ) var(--tw-invert, ) var(--tw-saturate, ) var(--tw-sepia, ) var(--tw-drop-shadow, );
@@ -2129,9 +2133,6 @@
     :is(:where(.group):hover .group-hover\:text-emerald-700) {
       color: var(--color-emerald-700);
     }
-    :is(:where(.group):hover .group-hover\:text-slate-900) {
-      color: var(--color-slate-900);
-    }
   }
   .selection\:bg-emerald-500 ::selection {
     background-color: var(--color-emerald-500);
@@ -2179,9 +2180,6 @@
     }
     .hover\:border-slate-300:hover {
       border-color: var(--color-slate-300);
-    }
-    .hover\:border-slate-400:hover {
-      border-color: var(--color-slate-400);
     }
     .hover\:bg-amber-100:hover {
       background-color: var(--color-amber-100);
@@ -2631,6 +2629,11 @@ body {
   inherits: false;
   initial-value: 0 0 #0000;
 }
+@property --tw-outline-style {
+  syntax: "*";
+  inherits: false;
+  initial-value: solid;
+}
 @property --tw-blur {
   syntax: "*";
   inherits: false;
@@ -2785,6 +2788,7 @@ body {
       --tw-ring-offset-width: 0px;
       --tw-ring-offset-color: #fff;
       --tw-ring-offset-shadow: 0 0 #0000;
+      --tw-outline-style: solid;
       --tw-blur: initial;
       --tw-brightness: initial;
       --tw-contrast: initial;
