@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import AlphaSignalsView from '@/components/AlphaSignalsView';
 import { StockQuote, TechnicalIndicators, InvestorScores } from '@/types/stock';
 import {
   Play,
@@ -42,8 +43,8 @@ interface Props {
 }
 
 export default function MarketScanner({ onSelectStock }: Props) {
-  // Mode: All, Fundamental, Technical, or Custom Query Builder
-  const [screenerMode, setScreenerMode] = useState<'all' | 'fundamental' | 'technical' | 'customQuery'>('all');
+  // Mode: Alpha Signals, All Filters, Fundamental, Technical, or Custom Query Builder
+  const [screenerMode, setScreenerMode] = useState<'alphaSignals' | 'all' | 'fundamental' | 'technical' | 'customQuery'>('alphaSignals');
 
   // Visual Custom Query Builder State
   const [customRules, setCustomRules] = useState<CustomQueryRule[]>([
@@ -273,6 +274,14 @@ export default function MarketScanner({ onSelectStock }: Props) {
             {/* Segmented Mode Control */}
             <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-semibold">
               <button
+                onClick={() => setScreenerMode('alphaSignals')}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all ${
+                  screenerMode === 'alphaSignals' ? 'bg-white text-indigo-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Zap className="w-3.5 h-3.5 text-indigo-600" /> Alpha Signals
+              </button>
+              <button
                 onClick={() => setScreenerMode('all')}
                 className={`px-3 py-1.5 rounded-lg transition-all ${
                   screenerMode === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
@@ -464,7 +473,15 @@ export default function MarketScanner({ onSelectStock }: Props) {
           </div>
         )}
 
+        {/* Alpha High-Probability Signals View Mode */}
+        {screenerMode === 'alphaSignals' && (
+          <div className="mb-6">
+            <AlphaSignalsView onSelectStock={onSelectStock} />
+          </div>
+        )}
+
         {/* Dynamic Filters Form */}
+        {screenerMode !== 'alphaSignals' && (
         <div className="space-y-5">
           {/* Section A: Fundamental Parameters */}
           {(screenerMode === 'all' || screenerMode === 'fundamental') && (
@@ -602,6 +619,7 @@ export default function MarketScanner({ onSelectStock }: Props) {
             </div>
           )}
         </div>
+        )}
       </div>
 
       {/* 3. Screened Results Table */}

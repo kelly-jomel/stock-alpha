@@ -28,6 +28,10 @@ export interface StockQuote {
   debtToEquity?: number;
   altmanZScore?: number;
   sector: string;
+  fiftyTwoWeekHigh?: number;
+  fiftyTwoWeekLow?: number;
+  dayHigh?: number;
+  dayLow?: number;
 }
 
 export interface InvestorScores {

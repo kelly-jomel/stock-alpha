@@ -4,15 +4,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import StockChart from '@/components/StockChart';
 import InvestorDashboard from '@/components/InvestorDashboard';
 import MarketScanner from '@/components/MarketScanner';
-import PortfolioView from '@/components/PortfolioView';
 import ExploreView from '@/components/ExploreView';
-import RecommendationsView from '@/components/RecommendationsView';
 import MarketMoversAllView from '@/components/MarketMoversAllView';
 import GoogleSignInModal, { UserProfile } from '@/components/GoogleSignInModal';
 import LiveTickerTape from '@/components/LiveTickerTape';
 import LandingPageView from '@/components/LandingPageView';
-import AlphaSignalsView from '@/components/AlphaSignalsView';
-import GrowwPeersComparison from '@/components/GrowwPeersComparison';
+import GrowwTerminalView from '@/components/GrowwTerminalView';
+import UnifiedPortfolioHub from '@/components/UnifiedPortfolioHub';
 import { StockQuote, Candle, TechnicalIndicators, InvestorScores } from '@/types/stock';
 import { STOCK_UNIVERSE } from '@/lib/stockData';
 import {
@@ -37,7 +35,7 @@ import {
 
 export default function Home() {
   const [selectedSymbol, setSelectedSymbol] = useState<string>('RELIANCE.NS');
-  const [activeTab, setActiveTab] = useState<'explore' | 'recommendations' | 'portfolio' | 'screener' | 'alpha-signals' | 'terminal' | 'market-movers-all'>('explore');
+  const [activeTab, setActiveTab] = useState<'explore' | 'portfolio' | 'screener' | 'terminal' | 'market-movers-all'>('explore');
   const [loading, setLoading] = useState<boolean>(true);
   const [range, setRange] = useState<string>('1y');
   const [chartInterval, setChartInterval] = useState<string>('1d');
@@ -45,6 +43,7 @@ export default function Home() {
   const [candles, setCandles] = useState<Candle[]>([]);
   const [technicals, setTechnicals] = useState<TechnicalIndicators | null>(null);
   const [investorScores, setInvestorScores] = useState<InvestorScores | null>(null);
+  const [lastTickTime, setLastTickTime] = useState<string>('');
 
   // User Profile & Google Cloud Authentication
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -148,6 +147,7 @@ export default function Home() {
             setCandles(data.candles);
             setTechnicals(data.technicals);
             setInvestorScores(data.investorScores);
+            setLastTickTime(new Date().toLocaleTimeString('en-IN', { hour12: false }));
             if (!silent) {
               setReplayIdx(-1);
               setIsReplaying(false);
@@ -163,10 +163,10 @@ export default function Home() {
 
     loadData(false);
 
-    // Live continuous ticker refresh every 5 seconds without freezing chart UI
+    // Live continuous ticker refresh every 2.5 seconds with zero UI lag
     const pollInterval = setInterval(() => {
       loadData(true);
-    }, 5000);
+    }, 2500);
 
     return () => {
       isCancelled = true;
@@ -312,67 +312,50 @@ export default function Home() {
           </div>
 
           {/* Clean Top Navigation Links */}
-          <nav className="flex items-center gap-1 text-xs font-semibold text-slate-600 shrink-0">
+          {/* Clean 4-Pillar Modern Navigation */}
+          <nav className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 shrink-0">
             <button
               onClick={() => setActiveTab('explore')}
-              className={`px-3 py-1.5 rounded-xl transition-all ${
+              className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
                 activeTab === 'explore'
-                  ? 'bg-slate-100 text-slate-900 font-bold'
+                  ? 'bg-slate-100 text-slate-900 font-bold shadow-2xs'
                   : 'hover:text-slate-900 hover:bg-slate-50'
               }`}
             >
               Explore
             </button>
             <button
-              onClick={() => setActiveTab('recommendations')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all ${
-                activeTab === 'recommendations'
-                  ? 'bg-slate-100 text-emerald-700 font-bold'
-                  : 'hover:text-slate-900 hover:bg-slate-50'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5 text-emerald-600" /> Recommendations
-            </button>
-            <button
               onClick={() => setActiveTab('portfolio')}
-              className={`px-3 py-1.5 rounded-xl transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
                 activeTab === 'portfolio'
-                  ? 'bg-slate-100 text-slate-900 font-bold'
+                  ? 'bg-emerald-50 text-emerald-800 font-bold border border-emerald-200/80 shadow-2xs'
                   : 'hover:text-slate-900 hover:bg-slate-50'
               }`}
             >
-              Portfolio
+              <Wallet className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Portfolio &amp; Ideas</span>
             </button>
             <button
               onClick={() => setActiveTab('screener')}
-              className={`px-3 py-1.5 rounded-xl transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
                 activeTab === 'screener'
-                  ? 'bg-slate-100 text-slate-900 font-bold'
+                  ? 'bg-slate-100 text-slate-900 font-bold shadow-2xs'
                   : 'hover:text-slate-900 hover:bg-slate-50'
               }`}
             >
-              Screener
-            </button>
-            <button
-              onClick={() => setActiveTab('alpha-signals')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all ${
-                activeTab === 'alpha-signals'
-                  ? 'bg-indigo-50 text-indigo-700 font-bold border border-indigo-200'
-                  : 'hover:text-indigo-600 hover:bg-indigo-50/50'
-              }`}
-            >
-              <Zap className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Alpha Signals</span>
+              <Sliders className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Screener &amp; Signals</span>
             </button>
             <button
               onClick={() => setActiveTab('terminal')}
-              className={`px-3 py-1.5 rounded-xl transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
                 activeTab === 'terminal'
-                  ? 'bg-slate-100 text-slate-900 font-bold'
+                  ? 'bg-slate-900 text-white font-bold shadow-xs'
                   : 'hover:text-slate-900 hover:bg-slate-50'
               }`}
             >
-              Terminal
+              <LineChart className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Groww Terminal</span>
             </button>
           </nav>
 
@@ -443,196 +426,45 @@ export default function Home() {
           />
         )}
 
-        {/* PAGE 2: Dedicated Recommendations & Portfolio Rebalance */}
-        {activeTab === 'recommendations' && (
-          <RecommendationsView onSelectStock={handleSelectStock} />
-        )}
-
-        {/* PAGE 3: Portfolio View (Order history consolidation & holdings import) */}
+        {/* PAGE 2: Unified Portfolio & AI Allocation Hub */}
         {activeTab === 'portfolio' && (
-          <PortfolioView onSelectStock={handleSelectStock} />
+          <UnifiedPortfolioHub onSelectStock={handleSelectStock} />
         )}
 
-        {/* PAGE 4: Quantitative Screener */}
+        {/* PAGE 3: Quantitative Screener & Alpha Signals Hub */}
         {activeTab === 'screener' && (
           <MarketScanner onSelectStock={handleSelectStock} />
         )}
 
-        {/* PAGE 5: Terminal & In-depth Technicals */}
+        {/* PAGE 4: Groww-Style Terminal & In-depth Technicals */}
         {activeTab === 'terminal' && (
-          <div className="space-y-6">
-            {/* Ticker Banner */}
-            {quote && (
-              <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-lg text-slate-800">
-                    {quote.symbol.slice(0, 2)}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h1 className="text-xl font-bold text-slate-900">{quote.name}</h1>
-                      <span className="text-xs px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-mono font-bold border border-slate-200">
-                        {quote.symbol.replace('.NS', '')}
-                      </span>
-                      <span className="text-xs px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200">
-                        {quote.sector}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-500 font-mono">
-                      <span>P/E: <strong className="text-slate-800">{quote.peRatio}</strong></span>
-                      <span>ROIC: <strong className="text-emerald-600">{quote.roic}%</strong></span>
-                      <span>FCF Yield: <strong className="text-emerald-600">{quote.fcfYield}%</strong></span>
-                      <span>Altman Z: <strong className="text-indigo-600">{quote.altmanZScore}</strong></span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="text-right">
-                  <div className="text-3xl font-bold text-slate-900 font-mono">
-                    ₹{quote.price.toLocaleString('en-IN')}
-                  </div>
-                  <div className={`text-xs font-bold font-mono mt-0.5 ${quote.change >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                    {quote.change >= 0 ? '+' : ''}{quote.change} ({quote.changePercent}%)
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Interactive Bar Replay Simulator Control Bar */}
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs flex flex-wrap items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-slate-800 flex items-center gap-1.5">
-                  <Play className="w-3.5 h-3.5 text-indigo-600" /> Bar Replay Simulator:
-                </span>
-                <span className="text-slate-500">
-                  {replayIdx >= 0 ? `Step ${replayIdx + 1} of ${candles.length} candles` : 'Live Chart Feed'}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    if (replayIdx < 0) {
-                      setReplayIdx(Math.max(10, candles.length - 20));
-                    }
-                    setIsReplaying(!isReplaying);
-                  }}
-                  className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
-                    isReplaying
-                      ? 'bg-amber-500 text-white shadow-xs'
-                      : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs'
-                  }`}
-                >
-                  <Play className="w-3 h-3" />
-                  {isReplaying ? 'Pause Replay' : 'Play Bar Replay'}
-                </button>
-                <button
-                  onClick={() => {
-                    setReplayIdx(prev => Math.min(candles.length - 1, (prev < 0 ? candles.length - 1 : prev) + 1));
-                  }}
-                  disabled={replayIdx < 0 || replayIdx >= candles.length - 1}
-                  className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold disabled:opacity-40"
-                >
-                  Step Next →
-                </button>
-                <button
-                  onClick={() => {
-                    setReplayIdx(-1);
-                    setIsReplaying(false);
-                  }}
-                  className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold flex items-center gap-1"
-                >
-                  <RotateCcw className="w-3 h-3" /> Reset to Live
-                </button>
-              </div>
-            </div>
-
-            {/* Interactive Candlestick Chart */}
-            {loading ? (
-              <div className="h-[420px] rounded-2xl bg-white border border-slate-200/80 flex items-center justify-center text-slate-400 animate-pulse text-xs font-medium">
-                Loading interactive financial chart...
-              </div>
-            ) : (
-              <StockChart
-                candles={activeCandles}
-                technicals={technicals || undefined}
-                symbol={selectedSymbol}
-                onTimeframeChange={handleTimeframeChange}
-                activeInterval={chartInterval}
-              />
-            )}
-
-            {/* 5-Gate Legendary Investor Scoring Model */}
-            {investorScores && (
-              <InvestorDashboard scores={investorScores} />
-            )}
-
-            {/* Classical & Harmonic Formations and Moving Average Squeeze */}
-            {technicals && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs">
-                  <div className="flex items-center gap-2 text-slate-900 font-bold text-sm mb-3">
-                    <Activity className="w-4 h-4 text-emerald-600" /> Classical &amp; Harmonic Formations
-                  </div>
-                  {technicals.patternsDetected.length === 0 ? (
-                    <p className="text-xs text-slate-400">Consolidating within normal trading ranges without active exhaustion signals.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {technicals.patternsDetected.map((p, idx) => (
-                        <div key={idx} className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-start gap-3">
-                          <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
-                            p.type === 'bullish' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
-                          }`}>
-                            {p.type}
-                          </span>
-                          <div>
-                            <div className="text-xs font-bold text-slate-900">{p.name} ({p.confidence}% Confidence)</div>
-                            <div className="text-[11px] text-slate-500 mt-0.5">{p.description}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs">
-                  <div className="flex items-center gap-2 text-slate-900 font-bold text-sm mb-3">
-                    <Layers className="w-4 h-4 text-emerald-600" /> Moving Average Energy &amp; Squeeze
-                  </div>
-                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 mb-3 text-xs space-y-1">
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">20 / 50 / 200 EMA Spread:</span>
-                      <span className="font-mono font-bold text-slate-900">{technicals.maConvergence.spreadPercent}%</span>
-                    </div>
-                    <div className="text-[11px] text-slate-600">
-                      {technicals.maConvergence.description}
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                      <div className="text-[10px] text-slate-400 uppercase">Resistance Level</div>
-                      <div className="font-bold text-rose-600 mt-0.5">₹{technicals.supportResistance.resistances[0] || '-'}</div>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                      <div className="text-[10px] text-slate-400 uppercase">Support Level</div>
-                      <div className="font-bold text-emerald-600 mt-0.5">₹{technicals.supportResistance.supports[0] || '-'}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Groww Peer Comparison Table */}
-            <GrowwPeersComparison
-              currentSymbol={selectedSymbol}
-              onSelectStock={handleSelectStock}
-            />
-          </div>
-        )}
-
-        {/* High-Probability Alpha Signals Tab */}
-        {activeTab === 'alpha-signals' && (
-          <AlphaSignalsView onSelectStock={handleSelectStock} />
+          <GrowwTerminalView
+            selectedSymbol={selectedSymbol}
+            onSelectStock={handleSelectStock}
+            quote={quote}
+            candles={candles}
+            technicals={technicals}
+            investorScores={investorScores}
+            loading={loading}
+            chartInterval={chartInterval}
+            onTimeframeChange={handleTimeframeChange}
+            replayIdx={replayIdx}
+            isReplaying={isReplaying}
+            onToggleReplay={() => {
+              if (replayIdx < 0) {
+                setReplayIdx(Math.max(10, candles.length - 20));
+              }
+              setIsReplaying(!isReplaying);
+            }}
+            onStepNextReplay={() => {
+              setReplayIdx(prev => Math.min(candles.length - 1, (prev < 0 ? candles.length - 1 : prev) + 1));
+            }}
+            onResetReplay={() => {
+              setReplayIdx(-1);
+              setIsReplaying(false);
+            }}
+            lastLiveTickTime={lastTickTime || '15:30:00 IST'}
+          />
         )}
       </main>
 
