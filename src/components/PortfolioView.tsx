@@ -6,6 +6,7 @@ import { calculatePortfolioAnalytics } from '@/lib/portfolioAnalytics';
 import { STOCK_UNIVERSE } from '@/lib/stockData';
 import SectorPieChart from '@/components/SectorPieChart';
 import PortfolioAnalysisSection, { getStockSignal } from '@/components/PortfolioAnalysisSection';
+import GrowwSyncModal from '@/components/GrowwSyncModal';
 import {
   parseExcelHoldings,
   parsePdfHoldings,
@@ -40,6 +41,7 @@ export default function PortfolioView({ onSelectStock }: Props) {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showGrowwSyncModal, setShowGrowwSyncModal] = useState(false);
 
   // Import mode: 'HOLDINGS' (existing quantity & avg cost) or 'ORDER_HISTORY' (Buy/Sell trades consolidated)
   const [importMode, setImportMode] = useState<'HOLDINGS' | 'ORDER_HISTORY'>('ORDER_HISTORY');
@@ -334,6 +336,12 @@ export default function PortfolioView({ onSelectStock }: Props) {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              onClick={() => setShowGrowwSyncModal(true)}
+              className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 font-bold text-xs transition-all shadow-2xs"
+            >
+              <RefreshCw className="w-4 h-4 text-teal-600" /> Sync with Groww
+            </button>
             <button
               onClick={() => refreshHoldingsData(holdings.map(h => ({ symbol: h.symbol, shares: h.shares, avgBuy: h.averageBuyPrice })))}
               disabled={loading}
@@ -913,6 +921,19 @@ export default function PortfolioView({ onSelectStock }: Props) {
           </div>
         </div>
       )}
+      {/* Groww Live Sync Modal */}
+      <GrowwSyncModal
+        isOpen={showGrowwSyncModal}
+        onClose={() => setShowGrowwSyncModal(false)}
+        onSyncSuccess={(newHoldings) => {
+          const raw = newHoldings.map(h => ({
+            symbol: h.symbol,
+            shares: h.shares,
+            avgBuy: h.averageBuyPrice
+          }));
+          refreshHoldingsData(raw);
+        }}
+      />
     </div>
   );
 }

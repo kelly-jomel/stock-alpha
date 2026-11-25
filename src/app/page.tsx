@@ -11,6 +11,8 @@ import MarketMoversAllView from '@/components/MarketMoversAllView';
 import GoogleSignInModal, { UserProfile } from '@/components/GoogleSignInModal';
 import LiveTickerTape from '@/components/LiveTickerTape';
 import LandingPageView from '@/components/LandingPageView';
+import KeyStockAlphaSignalsView from '@/components/KeyStockAlphaSignalsView';
+import GrowwPeersComparison from '@/components/GrowwPeersComparison';
 import { StockQuote, Candle, TechnicalIndicators, InvestorScores } from '@/types/stock';
 import { STOCK_UNIVERSE } from '@/lib/stockData';
 import {
@@ -35,7 +37,7 @@ import {
 
 export default function Home() {
   const [selectedSymbol, setSelectedSymbol] = useState<string>('RELIANCE.NS');
-  const [activeTab, setActiveTab] = useState<'explore' | 'recommendations' | 'portfolio' | 'screener' | 'terminal' | 'market-movers-all'>('explore');
+  const [activeTab, setActiveTab] = useState<'explore' | 'recommendations' | 'portfolio' | 'screener' | 'alpha-signals' | 'terminal' | 'market-movers-all'>('explore');
   const [loading, setLoading] = useState<boolean>(true);
   const [range, setRange] = useState<string>('1y');
   const [chartInterval, setChartInterval] = useState<string>('1d');
@@ -352,6 +354,17 @@ export default function Home() {
               Screener
             </button>
             <button
+              onClick={() => setActiveTab('alpha-signals')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all ${
+                activeTab === 'alpha-signals'
+                  ? 'bg-indigo-50 text-indigo-700 font-bold border border-indigo-200'
+                  : 'hover:text-indigo-600 hover:bg-indigo-50/50'
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5 text-indigo-600" />
+              <span>KeyStocks Alpha</span>
+            </button>
+            <button
               onClick={() => setActiveTab('terminal')}
               className={`px-3 py-1.5 rounded-xl transition-all ${
                 activeTab === 'terminal'
@@ -608,7 +621,18 @@ export default function Home() {
                 </div>
               </div>
             )}
+
+            {/* Groww Peer Comparison Table */}
+            <GrowwPeersComparison
+              currentSymbol={selectedSymbol}
+              onSelectStock={handleSelectStock}
+            />
           </div>
+        )}
+
+        {/* KeyStocks High-Probability Alpha Signals Tab */}
+        {activeTab === 'alpha-signals' && (
+          <KeyStockAlphaSignalsView onSelectStock={handleSelectStock} />
         )}
       </main>
 
