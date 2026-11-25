@@ -148,7 +148,22 @@ export default function StockChart({
         horzLines: { color: '#f8fafc' }
       },
       crosshair: { mode: 1 },
-      timeScale: { borderColor: '#e2e8f0', timeVisible: true },
+      timeScale: {
+        borderColor: '#e2e8f0',
+        timeVisible: true,
+        secondsVisible: false
+      },
+      localization: {
+        timeFormatter: (timestamp: number) => {
+          const date = new Date(timestamp * 1000);
+          return date.toLocaleTimeString('en-GB', {
+            timeZone: 'Asia/Kolkata',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+        },
+        dateFormat: 'dd MMM yyyy'
+      },
       rightPriceScale: { borderColor: '#e2e8f0' },
       width: chartContainerRef.current.clientWidth,
       height: 420
@@ -279,7 +294,22 @@ export default function StockChart({
     const rsiChart = createChart(rsiContainerRef.current, {
       layout: { background: { type: ColorType.Solid, color: '#ffffff' }, textColor: '#64748b' },
       grid: { vertLines: { color: '#f8fafc' }, horzLines: { color: '#f8fafc' } },
-      timeScale: { borderColor: '#e2e8f0', timeVisible: true },
+      timeScale: {
+        borderColor: '#e2e8f0',
+        timeVisible: true,
+        secondsVisible: false
+      },
+      localization: {
+        timeFormatter: (timestamp: number) => {
+          const date = new Date(timestamp * 1000);
+          return date.toLocaleTimeString('en-GB', {
+            timeZone: 'Asia/Kolkata',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+        },
+        dateFormat: 'dd MMM yyyy'
+      },
       rightPriceScale: { borderColor: '#e2e8f0' },
       width: rsiContainerRef.current.clientWidth,
       height: 140

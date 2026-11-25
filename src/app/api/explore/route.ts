@@ -4,8 +4,9 @@ import { STOCK_UNIVERSE, fetchStockQuote } from '@/lib/stockData';
 export async function GET() {
   try {
     // 1. Fetch live quotes for major Indian stock universe
+    const nonIndexUniverse = STOCK_UNIVERSE.filter(s => !s.symbol.startsWith('^'));
     const quotes = await Promise.all(
-      STOCK_UNIVERSE.filter(s => !s.symbol.startsWith('^')).map(s => fetchStockQuote(s.symbol))
+      nonIndexUniverse.map(s => fetchStockQuote(s.symbol))
     );
 
     // 2. Fetch live actual quotes for Indian benchmark indices
@@ -42,33 +43,55 @@ export async function GET() {
 
     // Top Gainers (highest positive changePercent)
     const topGainers = [...activeQuotes]
-      .sort((a, b) => b.changePercent - a.changePercent)
-      .slice(0, 5);
+      .sort((a, b) => b.changePercent - a.changePercent);
 
     // Top Losers (lowest changePercent)
     const topLosers = [...activeQuotes]
-      .sort((a, b) => a.changePercent - b.changePercent)
-      .slice(0, 5);
+      .sort((a, b) => a.changePercent - b.changePercent);
 
-    // Most Bought / Most Active on Stock Alpha (high volume & market cap)
+    // Most Traded across entire market (volume * price turnover)
     const mostBought = [...activeQuotes]
-      .sort((a, b) => (b.volume * b.price) - (a.volume * a.price))
-      .slice(0, 5);
+      .sort((a, b) => (b.volume * b.price) - (a.volume * a.price));
 
     // 52-Week High / Near Highs
     const fiftyTwoWeekHighs = [...activeQuotes]
       .filter(q => q.changePercent > 0.5)
-      .slice(0, 4);
+      .slice(0, 10);
 
-    // Sector breakdown
-    const sectors = [
-      { name: 'Banking & Financials', count: 6, icon: 'Landmark', change: '+1.4%' },
-      { name: 'Information Technology', count: 4, icon: 'Cpu', change: '+2.1%' },
-      { name: 'Energy & Oil', count: 4, icon: 'Zap', change: '+0.6%' },
-      { name: 'Automobile & EV', count: 3, icon: 'Car', change: '+1.8%' },
-      { name: 'Consumer Goods', count: 2, icon: 'ShoppingBag', change: '+0.9%' },
-      { name: 'Healthcare & Pharma', count: 1, icon: 'HeartPulse', change: '+1.1%' }
-    ];
+    // Dynamic sector breakdown calculated from actual active quotes
+    const sectorGroups: Record<string, { count: number; totalChange: number; icon: string }> = {
+      'Banking & Financials': { count: 0, totalChange: 0, icon: 'Landmark' },
+      'Information Technology': { count: 0, totalChange: 0, icon: 'Cpu' },
+      'Energy & Power': { count: 0, totalChange: 0, icon: 'Zap' },
+      'Automobile & EV': { count: 0, totalChange: 0, icon: 'Car' },
+      'Consumer Goods & Retail': { count: 0, totalChange: 0, icon: 'ShoppingBag' },
+      'Healthcare & Pharma': { count: 0, totalChange: 0, icon: 'HeartPulse' },
+      'Metals & Mining': { count: 0, totalChange: 0, icon: 'Building' },
+      'Capital Goods & Defense': { count: 0, totalChange: 0, icon: 'Shield' },
+      'Telecom & Logistics': { count: 0, totalChange: 0, icon: 'Radio' },
+      'Commodities & ETFs': { count: 0, totalChange: 0, icon: 'Coins' }
+    };
+
+    activeQuotes.forEach(q => {
+      const sec = q.sector || 'Banking & Financials';
+      if (!sectorGroups[sec]) {
+        sectorGroups[sec] = { count: 0, totalChange: 0, icon: 'Building' };
+      }
+      sectorGroups[sec].count++;
+      sectorGroups[sec].totalChange += q.changePercent;
+    });
+
+    const sectors = Object.entries(sectorGroups)
+      .filter(([, v]) => v.count > 0)
+      .map(([name, val]) => {
+        const avg = val.count > 0 ? (val.totalChange / val.count).toFixed(2) : '0.00';
+        return {
+          name,
+          count: val.count,
+          icon: val.icon,
+          change: `${Number(avg) >= 0 ? '+' : ''}${avg}%`
+        };
+      });
 
     return NextResponse.json({
       indices,
@@ -76,7 +99,8 @@ export async function GET() {
       topLosers,
       mostBought,
       fiftyTwoWeekHighs,
-      sectors
+      sectors,
+      allQuotes: activeQuotes
     });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });

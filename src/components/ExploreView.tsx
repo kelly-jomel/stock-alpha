@@ -43,6 +43,7 @@ interface ExploreData {
 
 interface Props {
   onSelectStock: (symbol: string) => void;
+  onViewAllMovers?: () => void;
 }
 
 function generateTrendPoints(basePrice: number, isPos: boolean): number[] {
@@ -57,7 +58,7 @@ function generateTrendPoints(basePrice: number, isPos: boolean): number[] {
   return points;
 }
 
-export default function ExploreView({ onSelectStock }: Props) {
+export default function ExploreView({ onSelectStock, onViewAllMovers }: Props) {
   const [data, setData] = useState<ExploreData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'gainers' | 'losers'>('gainers');
@@ -239,7 +240,17 @@ export default function ExploreView({ onSelectStock }: Props) {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Show All Toggle */}
+            {/* View All Dedicated Full Page button */}
+            {onViewAllMovers && (
+              <button
+                onClick={onViewAllMovers}
+                className="text-xs text-emerald-600 hover:text-emerald-700 font-bold px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-50 flex items-center gap-1 transition-colors cursor-pointer"
+              >
+                View All in Full Page <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+            {/* Inline Show All Toggle */}
             <button
               onClick={() => setShowAllMovers(!showAllMovers)}
               className="text-xs text-slate-600 hover:text-slate-900 font-semibold px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
