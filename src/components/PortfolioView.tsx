@@ -88,7 +88,8 @@ export default function PortfolioView({ onSelectStock }: Props) {
             if (res.ok) {
               const data = await res.json();
               const quote = data.quote;
-              const currentPrice = quote.price;
+              // If API returned live price > 0, use it; otherwise fallback to avgBuy
+              const currentPrice = quote.price > 0 ? quote.price : item.avgBuy;
               const investedValue = item.shares * item.avgBuy;
               const currentValue = item.shares * currentPrice;
               const unrealizedPnL = currentValue - investedValue;
@@ -97,13 +98,13 @@ export default function PortfolioView({ onSelectStock }: Props) {
               return {
                 id: item.symbol,
                 symbol: item.symbol,
-                name: quote.name,
-                exchange: quote.exchange,
+                name: quote.name && quote.name !== item.symbol ? quote.name : (item.symbol.replace('.NS', '').replace('.BO', '')),
+                exchange: quote.exchange || 'NSE',
                 shares: item.shares,
                 averageBuyPrice: item.avgBuy,
                 currentPrice,
-                currency: quote.currency,
-                sector: quote.sector,
+                currency: quote.currency || 'INR',
+                sector: quote.sector || 'Diversified',
                 currentValue: Number(currentValue.toFixed(2)),
                 investedValue: Number(investedValue.toFixed(2)),
                 unrealizedPnL: Number(unrealizedPnL.toFixed(2)),

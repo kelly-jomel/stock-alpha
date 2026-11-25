@@ -24,27 +24,147 @@ export interface ParsedTradeOrder {
 }
 
 /**
- * Normalizes user/broker symbol input to match our NSE or Indian universe.
- * Handles broker naming variants like 'TCS', 'TCS-EQ', 'TATAMOTORS', 'HDFCBANK-EQ', etc.
+ * Comprehensive mapping of Indian company names, broker descriptions, and abbreviations
+ * as exported by Groww, Zerodha (Console/Kite), Upstox, AngelOne, ICICI Direct, and HDFC Sky.
+ */
+const INDIAN_NAME_MAP: Record<string, string> = {
+  // Directly from user's broker export screenshot
+  'AVENUESAI': 'CCAVENUE.NS',
+  'AVENUESAILIMITED': 'CCAVENUE.NS',
+  'AVENUE SUPERMARTS': 'DMART.NS',
+  'DMART': 'DMART.NS',
+  'ACC': 'ACC.NS',
+  'ACCLIMITED': 'ACC.NS',
+  'ACCLTD': 'ACC.NS',
+  'INDIANRAILWAYFINCORP': 'IRFC.NS',
+  'INDIANRAILWAYFINCORPL': 'IRFC.NS',
+  'IRFC': 'IRFC.NS',
+  'GAIL': 'GAIL.NS',
+  'GAILINDIA': 'GAIL.NS',
+  'GAILINDIALTD': 'GAIL.NS',
+  'GAIL(INDIA)LTD': 'GAIL.NS',
+  'GAILIND': 'GAIL.NS',
+  'GAILLIMITED': 'GAIL.NS',
+  'TATASTEEL': 'TATASTEEL.NS',
+  'TATASTEELLIMITED': 'TATASTEEL.NS',
+  'OLA': 'OLAELEC.NS',
+  'OLAELECTRIC': 'OLAELEC.NS',
+  'OLAELECTRICMOBILITYLTD': 'OLAELEC.NS',
+  'OLAELEC': 'OLAELEC.NS',
+  'NIPPONAMC-NETFSILVER': 'SILVERBEES.NS',
+  'NIPPONAMCNETFSILVER': 'SILVERBEES.NS',
+  'NETFSILVER': 'SILVERBEES.NS',
+  'SILVERBEES': 'SILVERBEES.NS',
+  'INDIANRAILTOURCORPLTD': 'IRCTC.NS',
+  'IRCTC': 'IRCTC.NS',
+  'ADITYABIRLALIFESBRANL': 'ABLBL.NS',
+  'ABLBL': 'ABLBL.NS',
+  'ADITYABIRLAFASHION': 'ABFRL.NS',
+  'ABFRL': 'ABFRL.NS',
+  'TATAELXSI': 'TATAELXSI.NS',
+  'TATAELXSILIMITED': 'TATAELXSI.NS',
+  'HDFCBANK': 'HDFCBANK.NS',
+  'HDFCBANKLTD': 'HDFCBANK.NS',
+  'HDFCBANKLIMITED': 'HDFCBANK.NS',
+  'RELIANCE': 'RELIANCE.NS',
+  'RELIANCEINDUSTRIESLTD': 'RELIANCE.NS',
+  'TCS': 'TCS.NS',
+  'TATACONSULTANCYSVC': 'TCS.NS',
+  'INFOSYS': 'INFY.NS',
+  'INFY': 'INFY.NS',
+  'ICICIBANK': 'ICICIBANK.NS',
+  'ICICIBANKLTD': 'ICICIBANK.NS',
+  'TATAMOTORS': 'TATAMOTORS.NS',
+  'TATAMOTORSLTD': 'TATAMOTORS.NS',
+  'ITC': 'ITC.NS',
+  'ITCLTD': 'ITC.NS',
+  'BHARTIARTL': 'BHARTIARTL.NS',
+  'BHARTIAIRTEL': 'BHARTIARTL.NS',
+  'SBIN': 'SBIN.NS',
+  'STATEBANKOFINDIA': 'SBIN.NS',
+  'LT': 'LT.NS',
+  'LARSENTOUBRO': 'LT.NS',
+  'BAJFINANCE': 'BAJFINANCE.NS',
+  'BAJAJFINANCE': 'BAJFINANCE.NS',
+  'SUNPHARMA': 'SUNPHARMA.NS',
+  'TITAN': 'TITAN.NS',
+  'TITANCOMPANYLTD': 'TITAN.NS',
+  'MARUTI': 'MARUTI.NS',
+  'MARUTISUZUKI': 'MARUTI.NS',
+  'AXISBANK': 'AXISBANK.NS',
+  'NTPC': 'NTPC.NS',
+  'ONGC': 'ONGC.NS',
+  'KOTAKBANK': 'KOTAKBANK.NS',
+  'POWERGRID': 'POWERGRID.NS',
+  'HCLTECH': 'HCLTECH.NS',
+  'WIPRO': 'WIPRO.NS',
+  'COALINDIA': 'COALINDIA.NS',
+  'M&M': 'M&M.NS',
+  'MAHINDRA': 'M&M.NS',
+  'ADANIENT': 'ADANIENT.NS',
+  'ADANIPORTS': 'ADANIPORTS.NS',
+  'ULTRACEMCO': 'ULTRACEMCO.NS',
+  'ASIANPAINT': 'ASIANPAINT.NS',
+  'BAJAJ-AUTO': 'BAJAJ-AUTO.NS',
+  'BEML': 'BEML.NS',
+  'RAJOOENG': 'RAJOOENG.NS'
+};
+
+/**
+ * Normalizes user/broker symbol input to match official NSE / BSE symbols.
+ * Handles company names, clean scrip names, and broker naming conventions (e.g. -EQ, -BE).
  */
 export function normalizeSymbol(raw: string): string {
-  const clean = raw.trim().toUpperCase().replace(/[-_]EQ$/, '').replace(/\s+/g, '');
-  if (!clean) return '';
+  if (!raw) return '';
+  const trimmed = raw.trim();
 
-  // Direct match in universe
-  const directMatch = STOCK_UNIVERSE.find(
-    s => s.symbol.toUpperCase() === clean ||
-         s.symbol.replace('.NS', '').toUpperCase() === clean ||
-         s.name.toUpperCase().includes(clean)
+  // Strip spaces, dashes, dots, and common corporate suffixes
+  const alphanumericUpper = trimmed
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '');
+
+  if (!alphanumericUpper) return '';
+
+  // 1. Direct dictionary match from verified Indian scrips
+  if (INDIAN_NAME_MAP[alphanumericUpper]) {
+    return INDIAN_NAME_MAP[alphanumericUpper];
+  }
+
+  // 2. Suffix stripping (e.g., ACCLIMITED -> ACC, GAILINDIA -> GAIL)
+  const strippedSuffix = alphanumericUpper
+    .replace(/(LIMITED|LTD|CORP|CORPL|CORPLTD|INDIA|EQ|BE|SM|ST)$/g, '');
+
+  if (INDIAN_NAME_MAP[strippedSuffix]) {
+    return INDIAN_NAME_MAP[strippedSuffix];
+  }
+
+  // 3. Search STOCK_UNIVERSE
+  const universeMatch = STOCK_UNIVERSE.find(
+    s => s.symbol.replace('.NS', '').replace('.BO', '') === strippedSuffix ||
+         s.name.toUpperCase().replace(/[^A-Z0-9]/g, '').includes(strippedSuffix) ||
+         alphanumericUpper.includes(s.symbol.replace('.NS', '').replace('.BO', ''))
   );
 
-  if (directMatch) return directMatch.symbol;
+  if (universeMatch) return universeMatch.symbol;
 
-  // If already ends with .NS or .BO
-  if (clean.endsWith('.NS') || clean.endsWith('.BO')) return clean;
+  // 4. If already contains an exchange suffix
+  if (trimmed.toUpperCase().endsWith('.NS') || trimmed.toUpperCase().endsWith('.BO')) {
+    return trimmed.toUpperCase();
+  }
 
-  // Default to NSE symbol
-  return `${clean}.NS`;
+  // 5. Default to stripped symbol with .NS
+  return `${strippedSuffix || alphanumericUpper}.NS`;
+}
+
+/**
+ * Helper to extract numeric values from raw table cells, handling currency signs (₹, $, Rs), commas, etc.
+ */
+function parseNumberCell(val: unknown): number {
+  if (val == null) return 0;
+  if (typeof val === 'number') return isNaN(val) ? 0 : val;
+  const str = String(val).trim().replace(/₹|Rs\.?|\$|,/gi, '');
+  const parsed = parseFloat(str);
+  return isNaN(parsed) ? 0 : parsed;
 }
 
 /**
@@ -52,7 +172,6 @@ export function normalizeSymbol(raw: string): string {
  * Computes net remaining shares and the weighted average purchase price of active positions.
  */
 export function consolidateOrders(orders: ParsedTradeOrder[]): ParsedHoldingItem[] {
-  // Group orders by normalized symbol
   const grouped: Record<string, ParsedTradeOrder[]> = {};
 
   orders.forEach(order => {
@@ -134,7 +253,8 @@ export async function parseExcelOrderHistory(file: File): Promise<{
   let dateCol = -1;
   let orderIdCol = -1;
 
-  for (let r = 0; r < Math.min(jsonData.length, 20); r++) {
+  // Search first 25 rows for table headers
+  for (let r = 0; r < Math.min(jsonData.length, 25); r++) {
     const row = jsonData[r] as unknown[];
     if (!Array.isArray(row)) continue;
 
@@ -146,7 +266,8 @@ export async function parseExcelOrderHistory(file: File): Promise<{
         cell.includes('instrument') ||
         cell.includes('scrip') ||
         cell.includes('stock') ||
-        cell.includes('security')
+        cell.includes('security') ||
+        cell.includes('company')
       ) {
         if (symbolCol === -1) symbolCol = c;
       } else if (
@@ -170,7 +291,8 @@ export async function parseExcelOrderHistory(file: File): Promise<{
         cell.includes('trade price') ||
         cell.includes('avg price') ||
         cell.includes('execution price') ||
-        cell.includes('rate')
+        cell.includes('rate') ||
+        cell.includes('cost')
       ) {
         if (priceCol === -1) priceCol = c;
       } else if (
@@ -195,7 +317,7 @@ export async function parseExcelOrderHistory(file: File): Promise<{
     }
   }
 
-  // Fallback defaults if header search was ambiguous
+  // Fallback if header detection was ambiguous
   if (headerRowIndex === -1) {
     headerRowIndex = 0;
     symbolCol = 0;
@@ -219,11 +341,25 @@ export async function parseExcelOrderHistory(file: File): Promise<{
     const isSell = typeCell.includes('SELL') || typeCell === 'S' || typeCell.includes('SHORT');
     const orderType: 'BUY' | 'SELL' = isSell ? 'SELL' : 'BUY';
 
-    const rawQty = parseFloat(String(row[qtyCol] || '0').replace(/[^0-9.-]/g, ''));
-    let rawPrice = priceCol !== -1 ? parseFloat(String(row[priceCol] || '0').replace(/[^0-9.-]/g, '')) : 0;
+    const rawQty = parseNumberCell(row[qtyCol]);
 
-    if (isNaN(rawQty) || rawQty <= 0) continue;
-    if (isNaN(rawPrice) || rawPrice <= 0) rawPrice = 500;
+    // Inspect row for valid execution price
+    let rawPrice = priceCol !== -1 ? parseNumberCell(row[priceCol]) : 0;
+
+    // If price column was misaligned or 0, inspect adjacent numeric cells
+    if (rawPrice <= 0) {
+      for (let c = 0; c < row.length; c++) {
+        if (c !== symbolCol && c !== qtyCol && c !== typeCol && c !== orderIdCol) {
+          const val = parseNumberCell(row[c]);
+          if (val > 0.5 && val < 500000 && val !== rawQty) {
+            rawPrice = val;
+            break;
+          }
+        }
+      }
+    }
+
+    if (rawQty <= 0) continue;
 
     const normalized = normalizeSymbol(rawSym);
 
@@ -232,7 +368,7 @@ export async function parseExcelOrderHistory(file: File): Promise<{
       rawSymbol: rawSym,
       type: orderType,
       quantity: Math.round(rawQty),
-      price: Number(rawPrice.toFixed(2)),
+      price: rawPrice > 0 ? Number(rawPrice.toFixed(2)) : 100,
       date: dateCol !== -1 ? String(row[dateCol] || '') : undefined,
       orderId: orderIdCol !== -1 ? String(row[orderIdCol] || '') : undefined
     });
@@ -254,13 +390,12 @@ export async function parseExcelHoldings(file: File): Promise<ParsedHoldingItem[
 
   if (!jsonData || jsonData.length === 0) return [];
 
-  // Find header row indices
   let headerRowIndex = -1;
   let symbolCol = -1;
   let qtyCol = -1;
   let priceCol = -1;
 
-  for (let r = 0; r < Math.min(jsonData.length, 15); r++) {
+  for (let r = 0; r < Math.min(jsonData.length, 25); r++) {
     const row = jsonData[r] as unknown[];
     if (!Array.isArray(row)) continue;
 
@@ -279,7 +414,8 @@ export async function parseExcelHoldings(file: File): Promise<ParsedHoldingItem[
         cell.includes('qty') ||
         cell.includes('quantity') ||
         cell.includes('shares') ||
-        cell.includes('volume')
+        cell.includes('volume') ||
+        cell.includes('available qty')
       ) {
         if (qtyCol === -1) qtyCol = c;
       } else if (
@@ -290,7 +426,8 @@ export async function parseExcelHoldings(file: File): Promise<ParsedHoldingItem[
         cell.includes('cost price') ||
         cell.includes('purchase price') ||
         cell.includes('buy avg') ||
-        cell.includes('price')
+        cell.includes('price') ||
+        cell.includes('rate')
       ) {
         if (priceCol === -1) priceCol = c;
       }
@@ -302,7 +439,6 @@ export async function parseExcelHoldings(file: File): Promise<ParsedHoldingItem[
     }
   }
 
-  // Fallback defaults if header search was ambiguous
   if (headerRowIndex === -1) {
     headerRowIndex = 0;
     symbolCol = 0;
@@ -321,21 +457,30 @@ export async function parseExcelHoldings(file: File): Promise<ParsedHoldingItem[
       continue;
     }
 
-    const rawQty = parseFloat(String(row[qtyCol] || '0').replace(/[^0-9.-]/g, ''));
-    let rawPrice = priceCol !== -1 ? parseFloat(String(row[priceCol] || '0').replace(/[^0-9.-]/g, '')) : 0;
+    const rawQty = parseNumberCell(row[qtyCol]);
+    let rawPrice = priceCol !== -1 ? parseNumberCell(row[priceCol]) : 0;
 
-    if (isNaN(rawQty) || rawQty <= 0) continue;
+    // Fallback scan for price if designated column had 0
+    if (rawPrice <= 0) {
+      for (let c = 0; c < row.length; c++) {
+        if (c !== symbolCol && c !== qtyCol) {
+          const val = parseNumberCell(row[c]);
+          if (val > 0.5 && val < 500000 && val !== rawQty) {
+            rawPrice = val;
+            break;
+          }
+        }
+      }
+    }
+
+    if (rawQty <= 0) continue;
 
     const normalized = normalizeSymbol(rawSym);
-
-    if (isNaN(rawPrice) || rawPrice <= 0) {
-      rawPrice = 500;
-    }
 
     results.push({
       symbol: normalized,
       shares: Math.round(rawQty),
-      avgBuy: Number(rawPrice.toFixed(2)),
+      avgBuy: rawPrice > 0 ? Number(rawPrice.toFixed(2)) : 100,
       rawName: rawSym
     });
   }
