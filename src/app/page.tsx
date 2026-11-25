@@ -27,6 +27,8 @@ export default function Home() {
   const [selectedSymbol, setSelectedSymbol] = useState<string>('RELIANCE.NS');
   const [activeTab, setActiveTab] = useState<'explore' | 'recommendations' | 'portfolio' | 'terminal' | 'screener'>('explore');
   const [loading, setLoading] = useState<boolean>(true);
+  const [range, setRange] = useState<string>('1y');
+  const [interval, setInterval] = useState<string>('1d');
   const [quote, setQuote] = useState<StockQuote | null>(null);
   const [candles, setCandles] = useState<Candle[]>([]);
   const [technicals, setTechnicals] = useState<TechnicalIndicators | null>(null);
@@ -38,7 +40,7 @@ export default function Home() {
     async function loadData() {
       setLoading(true);
       try {
-        const res = await fetch(`/api/stock?symbol=${encodeURIComponent(selectedSymbol)}&range=1y`);
+        const res = await fetch(`/api/stock?symbol=${encodeURIComponent(selectedSymbol)}&range=${range}&interval=${interval}`);
         if (res.ok) {
           const data = await res.json();
           if (!isCancelled) {
@@ -58,7 +60,12 @@ export default function Home() {
     return () => {
       isCancelled = true;
     };
-  }, [selectedSymbol]);
+  }, [selectedSymbol, range, interval]);
+
+  const handleTimeframeChange = (newRange: string, newInterval: string) => {
+    setRange(newRange);
+    setInterval(newInterval);
+  };
 
   const handleSelectStock = (sym: string) => {
     setSelectedSymbol(sym);
@@ -237,7 +244,13 @@ export default function Home() {
                 Loading interactive financial chart...
               </div>
             ) : (
-              <StockChart candles={candles} technicals={technicals || undefined} symbol={selectedSymbol} />
+              <StockChart
+                candles={candles}
+                technicals={technicals || undefined}
+                symbol={selectedSymbol}
+                onTimeframeChange={handleTimeframeChange}
+                activeInterval={interval}
+              />
             )}
 
             {/* Moving Average & Formations */}

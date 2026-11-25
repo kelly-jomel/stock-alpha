@@ -41,6 +41,22 @@ export interface InvestorScores {
   actionSummary: string;
 }
 
+export interface PivotPoints {
+  classic: { p: number; r1: number; r2: number; r3: number; s1: number; s2: number; s3: number };
+  camarilla: { p: number; r1: number; r2: number; r3: number; r4: number; s1: number; s2: number; s3: number; s4: number };
+  woodie: { p: number; r1: number; r2: number; s1: number; s2: number };
+  fibonacci: { p: number; r1: number; r2: number; r3: number; s1: number; s2: number; s3: number };
+}
+
+export interface GapAnalysis {
+  hasGap: boolean;
+  type: 'GAP_UP' | 'GAP_DOWN' | 'NONE';
+  gapSizePercent: number;
+  gapPrice: number;
+  isFilled: boolean;
+  description: string;
+}
+
 export interface TechnicalIndicators {
   rsi14: number;
   macd: { macd: number; signal: number; histogram: number };
@@ -62,6 +78,8 @@ export interface TechnicalIndicators {
     supports: number[];
     resistances: number[];
   };
+  pivots?: PivotPoints;
+  gaps?: GapAnalysis;
 }
 
 export interface ScannerFilterParams {
@@ -70,6 +88,6 @@ export interface ScannerFilterParams {
   minInvestorScore?: number;
   maSetup?: 'ALL' | 'GOLDEN_CROSS' | 'MA_CONVERGENCE' | 'ABOVE_200EMA' | 'SLOPE_UP';
   rsiCondition?: 'ALL' | 'OVERSOLD' | 'OVERBOUGHT' | 'BULLISH_MOMENTUM';
-  patternCondition?: 'ALL' | 'DOUBLE_BOTTOM' | 'BREAKOUT' | 'HARMONIC_ABCD' | 'WOLFE_WAVE';
+  patternCondition?: 'ALL' | 'DOUBLE_BOTTOM' | 'BREAKOUT' | 'HARMONIC_ABCD' | 'WOLFE_WAVE' | 'GAP_UP' | 'GAP_DOWN' | 'PIVOT_BREAKOUT';
   minMarketCap?: number;
 }

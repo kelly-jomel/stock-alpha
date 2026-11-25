@@ -53,9 +53,12 @@ export async function GET(request: Request) {
     if (rsiCondition === 'OVERBOUGHT' && technicals.rsi14 <= 70) return false;
     if (rsiCondition === 'BULLISH_MOMENTUM' && (technicals.rsi14 < 50 || technicals.rsi14 > 68)) return false;
 
-    // 5. Pattern Condition
+    // 5. Pattern & KeyStocks Setup Condition
     if (patternCondition === 'BREAKOUT' && !technicals.patternsDetected.some(p => p.name.includes('Breakout'))) return false;
     if (patternCondition === 'DOUBLE_BOTTOM' && !technicals.patternsDetected.some(p => p.name.includes('Double Bottom'))) return false;
+    if (patternCondition === 'GAP_UP' && (!technicals.gaps?.hasGap || technicals.gaps.type !== 'GAP_UP')) return false;
+    if (patternCondition === 'GAP_DOWN' && (!technicals.gaps?.hasGap || technicals.gaps.type !== 'GAP_DOWN')) return false;
+    if (patternCondition === 'PIVOT_BREAKOUT' && (!technicals.pivots || quote.price <= technicals.pivots.classic.r1)) return false;
 
     return true;
   });

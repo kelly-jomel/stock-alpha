@@ -130,14 +130,18 @@ export async function fetchStockQuote(symbol: string): Promise<StockQuote> {
  * Fetches actual live historical candles directly from official exchange timeseries feeds.
  * No dummy or simulated candles.
  */
-export async function fetchStockCandles(symbol: string, range: string = '1y'): Promise<Candle[]> {
+export async function fetchStockCandles(
+  symbol: string,
+  range: string = '1y',
+  interval: string = '1d'
+): Promise<Candle[]> {
   try {
-    const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=1d`;
+    const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=${interval}`;
     const res = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       },
-      next: { revalidate: 60 }
+      next: { revalidate: 30 }
     });
 
     if (res.ok) {
@@ -155,9 +159,14 @@ export async function fetchStockCandles(symbol: string, range: string = '1y'): P
             q.high[i] != null &&
             q.low[i] != null
           ) {
-            const dateStr = new Date(timestamps[i] * 1000).toISOString().split('T')[0];
+            // For intraday, format as YYYY-MM-DD HH:mm or timestamp
+            const d = new Date(timestamps[i] * 1000);
+            const timeStr = interval.includes('m') || interval.includes('h')
+              ? `${d.toISOString().split('T')[0]} ${d.toTimeString().slice(0, 5)}`
+              : d.toISOString().split('T')[0];
+
             candles.push({
-              time: dateStr,
+              time: timeStr,
               timestamp: timestamps[i],
               open: Number(q.open[i].toFixed(2)),
               high: Number(q.high[i].toFixed(2)),

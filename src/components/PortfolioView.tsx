@@ -24,13 +24,7 @@ interface Props {
   onSelectStock: (symbol: string) => void;
 }
 
-const DEFAULT_HOLDINGS: Array<{ symbol: string; shares: number; avgBuy: number }> = [
-  { symbol: 'RELIANCE.NS', shares: 50, avgBuy: 1310.0 },
-  { symbol: 'TCS.NS', shares: 30, avgBuy: 2420.0 },
-  { symbol: 'HDFCBANK.NS', shares: 60, avgBuy: 810.0 },
-  { symbol: 'TATAMOTORS.NS', shares: 100, avgBuy: 740.0 },
-  { symbol: 'ICICIBANK.NS', shares: 45, avgBuy: 1220.0 }
-];
+const DEFAULT_HOLDINGS: Array<{ symbol: string; shares: number; avgBuy: number }> = [];
 
 export default function PortfolioView({ onSelectStock }: Props) {
   const [holdings, setHoldings] = useState<PortfolioHolding[]>([]);
@@ -50,17 +44,17 @@ export default function PortfolioView({ onSelectStock }: Props) {
   const [importPreview, setImportPreview] = useState<ParsedHoldingItem[]>([]);
   const [importError, setImportError] = useState<string | null>(null);
 
-  // Load holdings from localStorage or fallback
+  // Load holdings from localStorage (defaults to empty)
   useEffect(() => {
     async function loadPortfolio() {
       setLoading(true);
       const saved = localStorage.getItem('keystock_portfolio');
-      let baseList = DEFAULT_HOLDINGS;
+      let baseList: Array<{ symbol: string; shares: number; avgBuy: number }> = [];
 
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
+          if (Array.isArray(parsed)) {
             baseList = parsed;
           }
         } catch {
@@ -424,102 +418,140 @@ export default function PortfolioView({ onSelectStock }: Props) {
           <h2 className="text-sm font-bold text-slate-900">
             Active Holdings ({holdings.length})
           </h2>
-          <span className="text-xs text-slate-500">Real-time quotes with Indian market ticks</span>
+          {holdings.length > 0 && (
+            <button
+              onClick={() => {
+                localStorage.removeItem('keystock_portfolio');
+                setHoldings([]);
+              }}
+              className="text-xs text-rose-600 hover:text-rose-700 font-semibold"
+            >
+              Clear All Holdings
+            </button>
+          )}
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50/80 text-slate-500 uppercase font-semibold tracking-wider border-b border-slate-100">
-              <tr>
-                <th className="px-4 py-3">Security</th>
-                <th className="px-4 py-3">Weight</th>
-                <th className="px-4 py-3">Qty &amp; Avg Cost</th>
-                <th className="px-4 py-3">Current LTP</th>
-                <th className="px-4 py-3">Current Value</th>
-                <th className="px-4 py-3">Unrealized P&amp;L</th>
-                <th className="px-4 py-3">5-Gate Score</th>
-                <th className="px-4 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
-              {holdings.map((h) => {
-                const isPositive = h.unrealizedPnL >= 0;
-                return (
-                  <tr key={h.symbol} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-bold text-slate-900 text-sm">{h.name}</span>
-                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
-                          {h.symbol.replace('.NS', '')}
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">{h.sector} &bull; NSE</div>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <div className="font-mono font-bold text-slate-900">{h.weightPercent}%</div>
-                      <div className="w-12 bg-slate-100 h-1 rounded-full overflow-hidden mt-1">
-                        <div className="bg-emerald-500 h-full" style={{ width: `${h.weightPercent}%` }} />
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5 font-mono">
-                      <div className="font-semibold text-slate-800">{h.shares} shares</div>
-                      <div className="text-slate-400 text-[11px]">@ ₹{h.averageBuyPrice}</div>
-                    </td>
-                    <td className="px-4 py-3.5 font-mono font-bold text-slate-900">
-                      ₹{h.currentPrice.toLocaleString('en-IN')}
-                    </td>
-                    <td className="px-4 py-3.5 font-mono font-bold text-slate-900">
-                      ₹{h.currentValue.toLocaleString('en-IN')}
-                    </td>
-                    <td className="px-4 py-3.5 font-mono">
-                      <div className={`font-bold ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
-                        {isPositive ? '+' : ''}₹{h.unrealizedPnL.toLocaleString('en-IN')}
-                      </div>
-                      <div className={`text-[11px] ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
-                        {isPositive ? '+' : ''}{h.unrealizedPnLPercent}%
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5 font-mono">
-                      {h.investorScores ? (
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-slate-900">{h.investorScores.compositeScore}</span>
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
-                            h.investorScores.unifiedDecision === 'STRONG BUY'
-                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                              : h.investorScores.unifiedDecision === 'ACCUMULATE'
-                              ? 'bg-blue-50 text-blue-800 border-blue-200'
-                              : 'bg-amber-50 text-amber-800 border-amber-200'
-                          }`}>
-                            {h.investorScores.unifiedDecision}
+        {holdings.length === 0 ? (
+          <div className="p-12 text-center space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+              <Wallet className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-800 text-base">Your portfolio is currently empty</h3>
+              <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
+                Upload your broker statement (Excel/PDF) or manually add your Indian stock holdings to calculate your live returns, 5-gate investor quality score, and risk parity diagnostics.
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-semibold text-xs transition-all"
+              >
+                <FileSpreadsheet className="w-4 h-4" /> Import Excel / PDF Statement
+              </button>
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs transition-all"
+              >
+                <Plus className="w-4 h-4" /> Add Manually
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50/80 text-slate-500 uppercase font-semibold tracking-wider border-b border-slate-100">
+                <tr>
+                  <th className="px-4 py-3">Security</th>
+                  <th className="px-4 py-3">Weight</th>
+                  <th className="px-4 py-3">Qty &amp; Avg Cost</th>
+                  <th className="px-4 py-3">Current LTP</th>
+                  <th className="px-4 py-3">Current Value</th>
+                  <th className="px-4 py-3">Unrealized P&amp;L</th>
+                  <th className="px-4 py-3">5-Gate Score</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700">
+                {holdings.map((h) => {
+                  const isPositive = h.unrealizedPnL >= 0;
+                  return (
+                    <tr key={h.symbol} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-bold text-slate-900 text-sm">{h.name}</span>
+                          <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                            {h.symbol.replace('.NS', '')}
                           </span>
                         </div>
-                      ) : (
-                        <span className="text-slate-400">-</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3.5 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => onSelectStock(h.symbol)}
-                          className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors"
-                        >
-                          Analyze
-                        </button>
-                        <button
-                          onClick={() => handleRemoveHolding(h.symbol)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                          title="Remove from portfolio"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                        <div className="text-[11px] text-slate-400 mt-0.5">{h.sector} &bull; NSE</div>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <div className="font-mono font-bold text-slate-900">{h.weightPercent}%</div>
+                        <div className="w-12 bg-slate-100 h-1 rounded-full overflow-hidden mt-1">
+                          <div className="bg-emerald-500 h-full" style={{ width: `${h.weightPercent}%` }} />
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 font-mono">
+                        <div className="font-semibold text-slate-800">{h.shares} shares</div>
+                        <div className="text-slate-400 text-[11px]">@ ₹{h.averageBuyPrice}</div>
+                      </td>
+                      <td className="px-4 py-3.5 font-mono font-bold text-slate-900">
+                        ₹{h.currentPrice.toLocaleString('en-IN')}
+                      </td>
+                      <td className="px-4 py-3.5 font-mono font-bold text-slate-900">
+                        ₹{h.currentValue.toLocaleString('en-IN')}
+                      </td>
+                      <td className="px-4 py-3.5 font-mono">
+                        <div className={`font-bold ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          {isPositive ? '+' : ''}₹{h.unrealizedPnL.toLocaleString('en-IN')}
+                        </div>
+                        <div className={`text-[11px] ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          {isPositive ? '+' : ''}{h.unrealizedPnLPercent}%
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 font-mono">
+                        {h.investorScores ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-slate-900">{h.investorScores.compositeScore}</span>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                              h.investorScores.unifiedDecision === 'STRONG BUY'
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                : h.investorScores.unifiedDecision === 'ACCUMULATE'
+                                ? 'bg-blue-50 text-blue-800 border-blue-200'
+                                : 'bg-amber-50 text-amber-800 border-amber-200'
+                            }`}>
+                              {h.investorScores.unifiedDecision}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => onSelectStock(h.symbol)}
+                            className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors"
+                          >
+                            Analyze
+                          </button>
+                          <button
+                            onClick={() => handleRemoveHolding(h.symbol)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                            title="Remove from portfolio"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Import Modal */}

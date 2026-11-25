@@ -7,11 +7,12 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const symbol = searchParams.get('symbol') || 'RELIANCE.NS';
   const range = searchParams.get('range') || '1y';
+  const interval = searchParams.get('interval') || '1d';
 
   try {
     const [quote, candles] = await Promise.all([
       fetchStockQuote(symbol),
-      fetchStockCandles(symbol, range)
+      fetchStockCandles(symbol, range, interval)
     ]);
 
     const technicals = detectTechnicalIndicators(candles);

@@ -1,4 +1,111 @@
-import { Candle, TechnicalIndicators } from '@/types/stock';
+import { Candle, TechnicalIndicators, PivotPoints, GapAnalysis } from '@/types/stock';
+
+export function calculatePivotPoints(high: number, low: number, close: number, open: number): PivotPoints {
+  const p = (high + low + close) / 3;
+  const range = high - low;
+
+  // Classic Floor Pivots
+  const classic = {
+    p: Number(p.toFixed(2)),
+    r1: Number((2 * p - low).toFixed(2)),
+    r2: Number((p + range).toFixed(2)),
+    r3: Number((p + 2 * range).toFixed(2)),
+    s1: Number((2 * p - high).toFixed(2)),
+    s2: Number((p - range).toFixed(2)),
+    s3: Number((p - 2 * range).toFixed(2))
+  };
+
+  // Camarilla Pivots
+  const camarilla = {
+    p: Number(p.toFixed(2)),
+    r1: Number((close + range * 1.1 / 12).toFixed(2)),
+    r2: Number((close + range * 1.1 / 6).toFixed(2)),
+    r3: Number((close + range * 1.1 / 4).toFixed(2)),
+    r4: Number((close + range * 1.1 / 2).toFixed(2)),
+    s1: Number((close - range * 1.1 / 12).toFixed(2)),
+    s2: Number((close - range * 1.1 / 6).toFixed(2)),
+    s3: Number((close - range * 1.1 / 4).toFixed(2)),
+    s4: Number((close - range * 1.1 / 2).toFixed(2))
+  };
+
+  // Woodie Pivots (Weighting open: (H + L + 2*O)/4)
+  const woodieP = (high + low + 2 * open) / 4;
+  const woodie = {
+    p: Number(woodieP.toFixed(2)),
+    r1: Number((2 * woodieP - low).toFixed(2)),
+    r2: Number((woodieP + range).toFixed(2)),
+    s1: Number((2 * woodieP - high).toFixed(2)),
+    s2: Number((woodieP - range).toFixed(2))
+  };
+
+  // Fibonacci Pivots
+  const fibonacci = {
+    p: Number(p.toFixed(2)),
+    r1: Number((p + 0.382 * range).toFixed(2)),
+    r2: Number((p + 0.618 * range).toFixed(2)),
+    r3: Number((p + 1.000 * range).toFixed(2)),
+    s1: Number((p - 0.382 * range).toFixed(2)),
+    s2: Number((p - 0.618 * range).toFixed(2)),
+    s3: Number((p - 1.000 * range).toFixed(2))
+  };
+
+  return { classic, camarilla, woodie, fibonacci };
+}
+
+export function detectGapAnalysis(candles: Candle[]): GapAnalysis {
+  if (candles.length < 2) {
+    return {
+      hasGap: false,
+      type: 'NONE',
+      gapSizePercent: 0,
+      gapPrice: 0,
+      isFilled: true,
+      description: 'No gap detected'
+    };
+  }
+
+  const prev = candles[candles.length - 2];
+  const curr = candles[candles.length - 1];
+
+  // Gap Up: today's low > yesterday's high
+  if (curr.low > prev.high) {
+    const gapSize = curr.low - prev.high;
+    const gapPercent = Number(((gapSize / prev.high) * 100).toFixed(2));
+    const isFilled = curr.low <= prev.high;
+    return {
+      hasGap: true,
+      type: 'GAP_UP',
+      gapSizePercent: gapPercent,
+      gapPrice: Number(prev.high.toFixed(2)),
+      isFilled,
+      description: `Bullish Gap Up of ${gapPercent}% above yesterday's high ₹${prev.high.toFixed(1)}`
+    };
+  }
+
+  // Gap Down: today's high < yesterday's low
+  if (curr.high < prev.low) {
+    const gapSize = prev.low - curr.high;
+    const gapPercent = Number(((gapSize / prev.low) * 100).toFixed(2));
+    const isFilled = curr.high >= prev.low;
+    return {
+      hasGap: true,
+      type: 'GAP_DOWN',
+      gapSizePercent: gapPercent,
+      gapPrice: Number(prev.low.toFixed(2)),
+      isFilled,
+      description: `Bearish Gap Down of ${gapPercent}% below yesterday's low ₹${prev.low.toFixed(1)}`
+    };
+  }
+
+  return {
+    hasGap: false,
+    type: 'NONE',
+    gapSizePercent: 0,
+    gapPrice: 0,
+    isFilled: true,
+    description: 'Trading within standard continuous range'
+  };
+}
 
 export function calculateEMA(data: number[], period: number): number[] {
   const k = 2 / (period + 1);
@@ -159,6 +266,39 @@ export function detectTechnicalIndicators(candles: Candle[]): TechnicalIndicator
   const resistances = [Number(recentHighs[0].toFixed(1)), Number(recentHighs[Math.floor(recentHighs.length * 0.2)].toFixed(1))];
   const supports = [Number(recentLows[0].toFixed(1)), Number(recentLows[Math.floor(recentLows.length * 0.2)].toFixed(1))];
 
+  // KeyStocks Pivots & Gap Calculations
+  const lastCandle = candles[candles.length - 1];
+  const prevCandle = candles.length >= 2 ? candles[candles.length - 2] : lastCandle;
+  const pivots = calculatePivotPoints(prevCandle.high, prevCandle.low, prevCandle.close, prevCandle.open);
+  const gaps = detectGapAnalysis(candles);
+
+  // Pivot breakout patterns
+  if (currentPrice > pivots.classic.r1) {
+    patterns.push({
+      name: 'Classic Pivot R1 Breakout',
+      type: 'bullish',
+      description: `Price ₹${currentPrice.toFixed(1)} trading above Classic R1 Resistance ₹${pivots.classic.r1}`,
+      confidence: 85
+    });
+  } else if (currentPrice < pivots.classic.s1) {
+    patterns.push({
+      name: 'Classic Pivot S1 Breakdown',
+      type: 'bearish',
+      description: `Price ₹${currentPrice.toFixed(1)} broke below Classic S1 Support ₹${pivots.classic.s1}`,
+      confidence: 85
+    });
+  }
+
+  // Gap pattern
+  if (gaps.hasGap) {
+    patterns.push({
+      name: gaps.type === 'GAP_UP' ? 'Unfilled Gap Up' : 'Unfilled Gap Down',
+      type: gaps.type === 'GAP_UP' ? 'bullish' : 'bearish',
+      description: gaps.description,
+      confidence: 80
+    });
+  }
+
   return {
     rsi14: Number(rsi14.toFixed(1)),
     macd: {
@@ -177,6 +317,8 @@ export function detectTechnicalIndicators(candles: Candle[]): TechnicalIndicator
         : `Normal Trend Spread: EMAs expanded by ${spreadPercent.toFixed(1)}%`
     },
     patternsDetected: patterns,
-    supportResistance: { supports, resistances }
+    supportResistance: { supports, resistances },
+    pivots,
+    gaps
   };
 }
