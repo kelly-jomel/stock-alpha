@@ -11,6 +11,7 @@ import {
 } from 'lightweight-charts';
 import { Candle, TechnicalIndicators } from '@/types/stock';
 import { calculateBollingerBands, calculateSuperTrend, calculateSMA, calculateRSIFull } from '@/lib/freeIndicators';
+import DrawingToolsOverlay from '@/components/DrawingToolsOverlay';
 import {
   Layers,
   Activity,
@@ -133,6 +134,16 @@ export default function StockChart({
       onTimeframeChange(range, interval);
     }
   };
+
+  const minPrice = useMemo(() => {
+    if (!displayedCandles.length) return 0;
+    return Math.min(...displayedCandles.map(c => c.low));
+  }, [displayedCandles]);
+
+  const maxPrice = useMemo(() => {
+    if (!displayedCandles.length) return 100;
+    return Math.max(...displayedCandles.map(c => c.high));
+  }, [displayedCandles]);
 
   // Main Candlestick Chart Rendering
   useEffect(() => {
@@ -458,90 +469,110 @@ export default function StockChart({
           </div>
         </div>
 
-        {/* Indicator Toggles Bar */}
-        <div className="flex items-center gap-1.5 flex-wrap px-5 py-2 bg-slate-50/80 border-b border-slate-100 text-xs font-semibold">
-          <span className="text-slate-400 mr-1 text-[11px]">Indicators:</span>
+        {/* Indicator Toggles Bar & Drawing Tools */}
+        <div className="flex items-center justify-between gap-1.5 flex-wrap px-5 py-2 bg-slate-50/80 border-b border-slate-100 text-xs font-semibold">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-slate-400 mr-1 text-[11px]">Indicators:</span>
 
-          <button
-            onClick={() => setShowEMA(!showEMA)}
-            className={`px-2.5 py-1 rounded-lg border transition-all ${
-              showEMA ? 'bg-sky-50 text-sky-700 border-sky-200 font-bold' : 'bg-white text-slate-400 border-slate-200'
-            }`}
-          >
-            EMA (20/50)
-          </button>
-
-          <button
-            onClick={() => setShowSMA(!showSMA)}
-            className={`px-2.5 py-1 rounded-lg border transition-all ${
-              showSMA ? 'bg-purple-50 text-purple-700 border-purple-200 font-bold' : 'bg-white text-slate-400 border-slate-200'
-            }`}
-          >
-            SMA (50)
-          </button>
-
-          <button
-            onClick={() => setShowBollinger(!showBollinger)}
-            className={`px-2.5 py-1 rounded-lg border transition-all ${
-              showBollinger ? 'bg-indigo-50 text-indigo-700 border-indigo-200 font-bold' : 'bg-white text-slate-400 border-slate-200'
-            }`}
-          >
-            Bollinger Bands
-          </button>
-
-          <button
-            onClick={() => setShowSuperTrend(!showSuperTrend)}
-            className={`px-2.5 py-1 rounded-lg border transition-all ${
-              showSuperTrend ? 'bg-emerald-50 text-emerald-700 border-emerald-200 font-bold' : 'bg-white text-slate-400 border-slate-200'
-            }`}
-          >
-            SuperTrend
-          </button>
-
-          <button
-            onClick={() => setShowVolume(!showVolume)}
-            className={`px-2.5 py-1 rounded-lg border transition-all ${
-              showVolume ? 'bg-slate-200 text-slate-800 border-slate-300 font-bold' : 'bg-white text-slate-400 border-slate-200'
-            }`}
-          >
-            Volume
-          </button>
-
-          <button
-            onClick={() => setShowRSI(!showRSI)}
-            className={`px-2.5 py-1 rounded-lg border transition-all ${
-              showRSI ? 'bg-violet-50 text-violet-700 border-violet-200 font-bold' : 'bg-white text-slate-400 border-slate-200'
-            }`}
-          >
-            RSI
-          </button>
-
-          {/* Alpha Pivots Toggle & Selector */}
-          <div className="flex items-center gap-1 ml-auto">
             <button
-              onClick={() => setShowPivots(!showPivots)}
+              onClick={() => setShowEMA(!showEMA)}
               className={`px-2.5 py-1 rounded-lg border transition-all ${
-                showPivots ? 'bg-amber-50 text-amber-700 border-amber-300 font-bold' : 'bg-white text-slate-400 border-slate-200'
+                showEMA ? 'bg-sky-50 text-sky-700 border-sky-200 font-bold' : 'bg-white text-slate-400 border-slate-200'
               }`}
             >
-              Pivot Points
+              EMA (20/50)
             </button>
-            {showPivots && (
-              <select
-                value={pivotType}
-                onChange={(e) => setPivotType(e.target.value as any)}
-                className="bg-white border border-amber-200 text-amber-800 text-[11px] rounded-lg px-2 py-1 outline-none font-semibold cursor-pointer"
+
+            <button
+              onClick={() => setShowSMA(!showSMA)}
+              className={`px-2.5 py-1 rounded-lg border transition-all ${
+                showSMA ? 'bg-purple-50 text-purple-700 border-purple-200 font-bold' : 'bg-white text-slate-400 border-slate-200'
+              }`}
+            >
+              SMA (50)
+            </button>
+
+            <button
+              onClick={() => setShowBollinger(!showBollinger)}
+              className={`px-2.5 py-1 rounded-lg border transition-all ${
+                showBollinger ? 'bg-indigo-50 text-indigo-700 border-indigo-200 font-bold' : 'bg-white text-slate-400 border-slate-200'
+              }`}
+            >
+              Bollinger Bands
+            </button>
+
+            <button
+              onClick={() => setShowSuperTrend(!showSuperTrend)}
+              className={`px-2.5 py-1 rounded-lg border transition-all ${
+                showSuperTrend ? 'bg-emerald-50 text-emerald-700 border-emerald-200 font-bold' : 'bg-white text-slate-400 border-slate-200'
+              }`}
+            >
+              SuperTrend
+            </button>
+
+            <button
+              onClick={() => setShowVolume(!showVolume)}
+              className={`px-2.5 py-1 rounded-lg border transition-all ${
+                showVolume ? 'bg-slate-200 text-slate-800 border-slate-300 font-bold' : 'bg-white text-slate-400 border-slate-200'
+              }`}
+            >
+              Volume
+            </button>
+
+            <button
+              onClick={() => setShowRSI(!showRSI)}
+              className={`px-2.5 py-1 rounded-lg border transition-all ${
+                showRSI ? 'bg-violet-50 text-violet-700 border-violet-200 font-bold' : 'bg-white text-slate-400 border-slate-200'
+              }`}
+            >
+              RSI
+            </button>
+
+            {/* Alpha Pivots Toggle & Selector */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setShowPivots(!showPivots)}
+                className={`px-2.5 py-1 rounded-lg border transition-all ${
+                  showPivots ? 'bg-amber-50 text-amber-700 border-amber-300 font-bold' : 'bg-white text-slate-400 border-slate-200'
+                }`}
               >
-                <option value="classic">Classic Floor</option>
-                <option value="camarilla">Camarilla</option>
-                <option value="woodie">Woodie</option>
-                <option value="fibonacci">Fibonacci</option>
-              </select>
-            )}
+                Pivots
+              </button>
+              {showPivots && (
+                <select
+                  value={pivotType}
+                  onChange={(e) => setPivotType(e.target.value as any)}
+                  className="bg-white border border-amber-200 text-amber-800 text-[11px] rounded-lg px-2 py-1 outline-none font-semibold cursor-pointer"
+                >
+                  <option value="classic">Classic</option>
+                  <option value="camarilla">Camarilla</option>
+                  <option value="woodie">Woodie</option>
+                  <option value="fibonacci">Fibonacci</option>
+                </select>
+              )}
+            </div>
+          </div>
+
+          {/* Interactive Cloud-Synced Drawing Tools */}
+          <div className="flex items-center">
+            <DrawingToolsOverlay
+              symbol={symbol}
+              minPrice={minPrice}
+              maxPrice={maxPrice}
+              containerHeight={420}
+            />
           </div>
         </div>
 
-        <div ref={chartContainerRef} className="w-full h-[420px]" />
+        <div className="relative w-full h-[420px]">
+          <div ref={chartContainerRef} className="w-full h-full" />
+          <DrawingToolsOverlay
+            symbol={symbol}
+            minPrice={minPrice}
+            maxPrice={maxPrice}
+            containerHeight={420}
+          />
+        </div>
       </div>
 
       {/* Free Indicator: RSI 14 Sub-Chart */}

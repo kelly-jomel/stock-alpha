@@ -590,10 +590,13 @@ export default function MarketScanner({ onSelectStock }: Props) {
                     <option value="ALL">Any Pattern</option>
                     <option value="BREAKOUT">60-Day Resistance Breakout</option>
                     <option value="DOUBLE_BOTTOM">Double Bottom (W-Shape)</option>
+                    <option value="TRIPLE_BOTTOM">Triple Bottom Reversal</option>
+                    <option value="TRIPLE_TOP">Triple Top Resistance</option>
+                    <option value="KEY_ZONE">Key Support Zone Test</option>
                     <option value="HARMONIC_ABCD">Harmonic ABCD Wave</option>
                     <option value="WOLFE_WAVE">Wolfe Wave Wedge (Point 5)</option>
                     <option value="FIB_BOUNCE">Fibonacci 61.8% Golden Bounce</option>
-                    <option value="CANDLE_BULLISH">Bullish Candle (Hammer / Engulfing)</option>
+                    <option value="CANDLE_BULLISH">Bullish Candle (Hammer / Engulfing / Morning Star)</option>
                     <option value="GAP_UP">↗ Bullish Gap Up</option>
                     <option value="GAP_DOWN">↘ Bearish Gap Down</option>
                     <option value="PIVOT_BREAKOUT">⚡ Classic Pivot R1 Breakout</option>

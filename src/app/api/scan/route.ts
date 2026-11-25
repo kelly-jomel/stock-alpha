@@ -56,6 +56,9 @@ export async function GET(request: Request) {
     // 5. Pattern & Alpha Setup Condition
     if (patternCondition === 'BREAKOUT' && !technicals.patternsDetected.some(p => p.name.includes('Breakout'))) return false;
     if (patternCondition === 'DOUBLE_BOTTOM' && !technicals.patternsDetected.some(p => p.name.includes('Double Bottom'))) return false;
+    if (patternCondition === 'TRIPLE_BOTTOM' && !technicals.patternsDetected.some(p => p.name.includes('Triple Bottom') || p.name.includes('Double Bottom'))) return false;
+    if (patternCondition === 'TRIPLE_TOP' && !technicals.patternsDetected.some(p => p.name.includes('Triple Top') || p.name.includes('Resistance'))) return false;
+    if (patternCondition === 'KEY_ZONE' && !technicals.patternsDetected.some(p => p.name.includes('Support') || p.name.includes('Key Zone') || p.name.includes('Bounce'))) return false;
     if (patternCondition === 'HARMONIC_ABCD' && !technicals.patternsDetected.some(p => p.name.includes('Harmonic') || p.name.includes('ABCD'))) return false;
     if (patternCondition === 'WOLFE_WAVE' && !technicals.patternsDetected.some(p => p.name.includes('Wolfe Wave'))) return false;
     if (patternCondition === 'FIB_BOUNCE' && !technicals.patternsDetected.some(p => p.name.includes('Fibonacci') || p.name.includes('Fib'))) return false;

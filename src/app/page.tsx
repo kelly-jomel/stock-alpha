@@ -7,6 +7,7 @@ import MarketScanner from '@/components/MarketScanner';
 import ExploreView from '@/components/ExploreView';
 import MarketMoversAllView from '@/components/MarketMoversAllView';
 import GoogleSignInModal, { UserProfile } from '@/components/GoogleSignInModal';
+import CloudSyncStatusBadge from '@/components/CloudSyncStatusBadge';
 import LiveTickerTape from '@/components/LiveTickerTape';
 import LandingPageView from '@/components/LandingPageView';
 import ProTerminalView from '@/components/ProTerminalView';
@@ -359,8 +360,9 @@ export default function Home() {
             </button>
           </nav>
 
-          {/* Google Cloud Sign-In Button */}
-          <div className="flex items-center gap-2 shrink-0">
+          {/* Cloud Sync Status & Google Cloud Sign-In Button */}
+          <div className="flex items-center gap-2.5 shrink-0">
+            <CloudSyncStatusBadge />
             {user?.isSignedIn ? (
               <button
                 onClick={() => setIsSignInModalOpen(true)}
