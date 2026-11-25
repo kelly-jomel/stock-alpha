@@ -185,6 +185,13 @@ class CloudSyncService {
   }
 
   // Watchlist Helpers
+  public updateWatchlist(watchlist: string[]): void {
+    this.saveLocalData(prev => ({
+      ...prev,
+      watchlist
+    }));
+  }
+
   public toggleWatchlist(symbol: string): boolean {
     let isAdded = false;
     this.saveLocalData(prev => {

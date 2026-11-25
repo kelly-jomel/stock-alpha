@@ -20,31 +20,38 @@ function createWindow() {
     }
   });
 
-  // Detect available port (defaults to 3000, falls back to 3001)
+  // Production live URL or local dev server
+  const liveUrl = process.env.STOCK_ALPHA_URL || 'https://stock-alpha-lime.vercel.app';
   const candidatePorts = [3000, 3001, 3002];
   
-  function tryConnect(ports, index = 0) {
-    if (index >= ports.length) {
-      mainWindow.loadFile(path.join(__dirname, 'loading.html'));
-      setTimeout(() => tryConnect(ports, 0), 1000);
-      return;
+  // In development, check local ports first; in production binary, connect straight to live cloud terminal
+  if (process.env.NODE_ENV === 'development') {
+    function tryConnect(ports, index = 0) {
+      if (index >= ports.length) {
+        mainWindow.loadURL(liveUrl);
+        return;
+      }
+
+      const p = ports[index];
+      const testUrl = `http://localhost:${p}`;
+      
+      http.get(testUrl, (res) => {
+        if (res.statusCode === 200 || res.statusCode === 304) {
+          mainWindow.loadURL(testUrl);
+        } else {
+          tryConnect(ports, index + 1);
+        }
+      }).on('error', () => {
+        tryConnect(ports, index + 1);
+      });
     }
 
-    const p = ports[index];
-    const testUrl = `http://localhost:${p}`;
-    
-    http.get(testUrl, (res) => {
-      if (res.statusCode === 200 || res.statusCode === 304) {
-        mainWindow.loadURL(testUrl);
-      } else {
-        tryConnect(ports, index + 1);
-      }
-    }).on('error', () => {
-      tryConnect(ports, index + 1);
+    tryConnect(candidatePorts);
+  } else {
+    mainWindow.loadURL(liveUrl).catch(() => {
+      mainWindow.loadFile(path.join(__dirname, 'loading.html'));
     });
   }
-
-  tryConnect(candidatePorts);
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('https:') || url.startsWith('http:')) {

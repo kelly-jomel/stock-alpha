@@ -11,7 +11,7 @@ import CloudSyncStatusBadge from '@/components/CloudSyncStatusBadge';
 import LiveTickerTape from '@/components/LiveTickerTape';
 import LandingPageView from '@/components/LandingPageView';
 import ProTerminalView from '@/components/ProTerminalView';
-import KeyStocksTerminalView from '@/components/KeyStocksTerminalView';
+import TechnicalWorkstationView from '@/components/TechnicalWorkstationView';
 import UnifiedPortfolioHub from '@/components/UnifiedPortfolioHub';
 import { StockQuote, Candle, TechnicalIndicators, InvestorScores } from '@/types/stock';
 import { STOCK_UNIVERSE } from '@/lib/stockData';
@@ -37,7 +37,7 @@ import {
 
 export default function Home() {
   const [selectedSymbol, setSelectedSymbol] = useState<string>('RELIANCE.NS');
-  const [activeTab, setActiveTab] = useState<'keystocks' | 'explore' | 'portfolio' | 'screener' | 'terminal' | 'market-movers-all'>('keystocks');
+  const [activeTab, setActiveTab] = useState<'terminal_workstation' | 'explore' | 'portfolio' | 'screener' | 'terminal' | 'market-movers-all'>('terminal_workstation');
   const [loading, setLoading] = useState<boolean>(true);
   const [range, setRange] = useState<string>('1y');
   const [chartInterval, setChartInterval] = useState<string>('1d');
@@ -215,9 +215,9 @@ export default function Home() {
       {/* Modern Clean Header */}
       <header className="sticky top-0 z-50 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-6 py-2.5">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-6">
-          {/* Logo & Brand Name */}
+          {/* Logo & Brand Name (White-Label Stock Alpha) */}
           <div
-            onClick={() => setActiveTab('keystocks')}
+            onClick={() => setActiveTab('terminal_workstation')}
             className="flex items-center gap-2.5 cursor-pointer group shrink-0"
           >
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 flex items-center justify-center shadow-xs">
@@ -225,7 +225,7 @@ export default function Home() {
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-bold text-lg text-white tracking-tight">KeyStocks</span>
+                <span className="font-bold text-lg text-white tracking-tight">Stock Alpha</span>
                 <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-emerald-950 text-emerald-400 border border-emerald-800 font-bold uppercase">
                   Workstation
                 </span>
@@ -297,15 +297,15 @@ export default function Home() {
           {/* Clean 5-Pillar Modern Navigation */}
           <nav className="flex items-center gap-1.5 text-xs font-semibold text-slate-300 shrink-0">
             <button
-              onClick={() => setActiveTab('keystocks')}
+              onClick={() => setActiveTab('terminal_workstation')}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
-                activeTab === 'keystocks'
+                activeTab === 'terminal_workstation'
                   ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold shadow-xs'
                   : 'hover:text-white hover:bg-slate-800'
               }`}
             >
               <Zap className="w-3.5 h-3.5 text-emerald-400" />
-              <span>KeyStocks Terminal</span>
+              <span>Technical Terminal</span>
             </button>
             <button
               onClick={() => setActiveTab('explore')}
@@ -404,9 +404,9 @@ export default function Home() {
 
       {/* Main Page Body */}
       <main className="flex-1 w-full mx-auto p-2 sm:p-4">
-        {/* PAGE 0: KeyStocks Terminal Workstation (Original Replica with All Features) */}
-        {activeTab === 'keystocks' && (
-          <KeyStocksTerminalView />
+        {/* PAGE 0: Technical Terminal Workstation */}
+        {activeTab === 'terminal_workstation' && (
+          <TechnicalWorkstationView />
         )}
 
         {/* PAGE 1: Market Explore */}

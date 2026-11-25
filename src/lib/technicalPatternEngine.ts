@@ -12,7 +12,7 @@ export interface KeyPatternMatch {
 }
 
 /**
- * Technical Scanner Engine - Replicating KeyStocks Screener Algorithms
+ * Technical Scanner Engine - Algorithmic Technical Screener Suite
  * (Candlestick Patterns, Key Support/Resistance Zones, Triple Top & Triple Bottom)
  */
 export class TechnicalPatternEngine {

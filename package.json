@@ -2,13 +2,15 @@
   "name": "web-app",
   "version": "0.1.0",
   "private": true,
+  "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
     "build": "npx @tailwindcss/cli -i ./src/app/globals.css -o ./src/app/compiled-tailwind.css && next build",
     "start": "next start",
     "lint": "eslint",
     "desktop": "electron ./electron/main.js",
-    "desktop:dev": "concurrently \"next dev\" \"wait-on http://localhost:3000 && electron ./electron/main.js\""
+    "desktop:dev": "concurrently \"next dev\" \"wait-on http://localhost:3000 && electron ./electron/main.js\"",
+    "build:exe": "electron-packager . \"Stock Alpha\" --platform=win32 --arch=x64 --out=dist-win --overwrite --prune=true --ignore=\"^/(.next|.git|node_modules|dist-win|Videos)\""
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.5",
@@ -24,6 +26,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@electron/packager": "^18.4.4",
     "@tailwindcss/cli": "^4.3.5",
     "@tailwindcss/turbopack": "4.3.3",
     "@types/canvas-confetti": "^1.9.0",
