@@ -104,7 +104,7 @@ export default function PortfolioView({ onSelectStock }: Props) {
               const data = await res.json();
               const quote = data.quote;
               // If API returned live price > 0, use it; otherwise fallback to avgBuy
-              const currentPrice = quote.price > 0 ? quote.price : item.avgBuy;
+              const currentPrice = (quote && typeof quote.price === 'number' && quote.price > 0) ? quote.price : item.avgBuy;
               const investedValue = item.shares * item.avgBuy;
               const currentValue = item.shares * currentPrice;
               const unrealizedPnL = currentValue - investedValue;

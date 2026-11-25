@@ -107,7 +107,50 @@ const INDIAN_NAME_MAP: Record<string, string> = {
   'ASIANPAINT': 'ASIANPAINT.NS',
   'BAJAJ-AUTO': 'BAJAJ-AUTO.NS',
   'BEML': 'BEML.NS',
-  'RAJOOENG': 'RAJOOENG.NS'
+  'RAJOOENG': 'RAJOOENG.NS',
+
+  // All User Specific Broker Order History Equities
+  'TMPV': 'TMPV.NS',
+  'TATAMOTORSPASSVEHLTD': 'TMPV.NS',
+  'TATAMOTORSPASSENGELTD': 'TMPV.NS',
+  'RVNL': 'RVNL.NS',
+  'RAILVIKASNIGAMLIMITED': 'RVNL.NS',
+  'RAILVIKASNIGAM': 'RVNL.NS',
+  'RTNINDIA': 'RTNINDIA.NS',
+  'RATTANINDIAENTLIMITED': 'RTNINDIA.NS',
+  'RATTANINDIAENT': 'RTNINDIA.NS',
+  'JBMA': 'JBMA.NS',
+  'JBMAUTO': 'JBMA.NS',
+  'JBMAUTOLIMITED': 'JBMA.NS',
+  'OLECTRA': 'OLECTRA.NS',
+  'OLECTRAGREENTECH': 'OLECTRA.NS',
+  'OLECTRAGREENTECHLIMITED': 'OLECTRA.NS',
+  'TATAPOWER': 'TATAPOWER.NS',
+  'TATAPOWERCOLTD': 'TATAPOWER.NS',
+  'TATACONSUM': 'TATACONSUM.NS',
+  'TATACONSUMERPRODUCTLTD': 'TATACONSUM.NS',
+  'TATACONSUMER': 'TATACONSUM.NS',
+  'INDHOTEL': 'INDHOTEL.NS',
+  'THEINDIANHOTELSCOLTD': 'INDHOTEL.NS',
+  'INDIANHOTELS': 'INDHOTEL.NS',
+  'MAZDOCK': 'MAZDOCK.NS',
+  'MAZAGONDOCKSHIPBUILLTD': 'MAZDOCK.NS',
+  'MAZAGONDOCK': 'MAZDOCK.NS',
+  'COCHINSHIP': 'COCHINSHIP.NS',
+  'COCHINSHIPYARDLIMITED': 'COCHINSHIP.NS',
+  'COCHINSHIPYARD': 'COCHINSHIP.NS',
+  'ETHOSLTD': 'ETHOSLTD.NS',
+  'ETHOSLIMITED': 'ETHOSLTD.NS',
+  'ETHOS': 'ETHOSLTD.NS',
+  'HYUNDAI': 'HYUNDAI.NS',
+  'HYUNDAIMOTORINDIALTD': 'HYUNDAI.NS',
+  'HYUNDAIMOTOR': 'HYUNDAI.NS',
+  'JKTYRE': 'JKTYRE.NS',
+  'JKTYREINDUSTRIESLTD': 'JKTYRE.NS',
+  'LGEINDIA': 'LGEINDIA.NS',
+  'LGELECTRONICSINDIALTD': 'LGEINDIA.NS',
+  'TATAGOLD': 'TATAGOLD.NS',
+  'TATAAMLTATAGOLD': 'TATAGOLD.NS'
 };
 
 /**
@@ -250,6 +293,7 @@ export async function parseExcelOrderHistory(file: File): Promise<{
   let typeCol = -1;
   let qtyCol = -1;
   let priceCol = -1;
+  let valueCol = -1;
   let dateCol = -1;
   let orderIdCol = -1;
 
@@ -261,15 +305,19 @@ export async function parseExcelOrderHistory(file: File): Promise<{
     for (let c = 0; c < row.length; c++) {
       const cell = String(row[c] || '').toLowerCase().trim();
 
-      if (
-        cell.includes('symbol') ||
-        cell.includes('instrument') ||
-        cell.includes('scrip') ||
-        cell.includes('stock') ||
-        cell.includes('security') ||
-        cell.includes('company')
+      // Exact match check first for 'symbol' or 'scrip' to prefer dedicated symbol over generic 'stock name'
+      if (cell === 'symbol' || cell === 'scrip' || cell === 'instrument' || cell === 'ticker') {
+        symbolCol = c;
+      } else if (
+        symbolCol === -1 &&
+        (cell.includes('symbol') ||
+         cell.includes('instrument') ||
+         cell.includes('scrip') ||
+         cell.includes('stock') ||
+         cell.includes('security') ||
+         cell.includes('company'))
       ) {
-        if (symbolCol === -1) symbolCol = c;
+        symbolCol = c;
       } else if (
         cell.includes('type') ||
         cell.includes('side') ||
@@ -286,6 +334,15 @@ export async function parseExcelOrderHistory(file: File): Promise<{
         cell.includes('traded qty')
       ) {
         if (qtyCol === -1) qtyCol = c;
+      } else if (
+        cell === 'value' ||
+        cell.includes('turnover') ||
+        cell.includes('order value') ||
+        cell.includes('trade value') ||
+        cell.includes('gross value') ||
+        cell.includes('total amount')
+      ) {
+        if (valueCol === -1) valueCol = c;
       } else if (
         cell.includes('price') ||
         cell.includes('trade price') ||
@@ -311,7 +368,7 @@ export async function parseExcelOrderHistory(file: File): Promise<{
       }
     }
 
-    if (symbolCol !== -1 && (qtyCol !== -1 || priceCol !== -1)) {
+    if (symbolCol !== -1 && (qtyCol !== -1 || priceCol !== -1 || valueCol !== -1)) {
       headerRowIndex = r;
       break;
     }
@@ -343,16 +400,24 @@ export async function parseExcelOrderHistory(file: File): Promise<{
 
     const rawQty = parseNumberCell(row[qtyCol]);
 
-    // Inspect row for valid execution price
-    let rawPrice = priceCol !== -1 ? parseNumberCell(row[priceCol]) : 0;
+    // Inspect row for valid execution price or calculate from total Value turnover
+    let rawPrice = 0;
+    const rawVal = valueCol !== -1 ? parseNumberCell(row[valueCol]) : 0;
 
-    // If price column was misaligned or 0, inspect adjacent numeric cells
+    if (rawVal > 0 && rawQty > 0) {
+      // If broker statement provides total order Value (e.g. Value = ₹141.50 for Qty 10 -> Price = ₹14.15)
+      rawPrice = rawVal / rawQty;
+    } else if (priceCol !== -1) {
+      rawPrice = parseNumberCell(row[priceCol]);
+    }
+
+    // If price is still missing or 0, inspect adjacent numeric cells
     if (rawPrice <= 0) {
       for (let c = 0; c < row.length; c++) {
-        if (c !== symbolCol && c !== qtyCol && c !== typeCol && c !== orderIdCol) {
+        if (c !== symbolCol && c !== qtyCol && c !== typeCol && c !== orderIdCol && c !== valueCol) {
           const val = parseNumberCell(row[c]);
-          if (val > 0.5 && val < 500000 && val !== rawQty) {
-            rawPrice = val;
+          if (val > 0.05 && val < 500000 && val !== rawQty) {
+            rawPrice = rawQty > 1 && val > rawQty * 10 ? val / rawQty : val;
             break;
           }
         }
@@ -394,6 +459,7 @@ export async function parseExcelHoldings(file: File): Promise<ParsedHoldingItem[
   let symbolCol = -1;
   let qtyCol = -1;
   let priceCol = -1;
+  let valueCol = -1;
 
   for (let r = 0; r < Math.min(jsonData.length, 25); r++) {
     const row = jsonData[r] as unknown[];
@@ -401,15 +467,18 @@ export async function parseExcelHoldings(file: File): Promise<ParsedHoldingItem[
 
     for (let c = 0; c < row.length; c++) {
       const cell = String(row[c] || '').toLowerCase().trim();
-      if (
-        cell.includes('symbol') ||
-        cell.includes('instrument') ||
-        cell.includes('scrip') ||
-        cell.includes('stock') ||
-        cell.includes('security') ||
-        cell.includes('company')
+      if (cell === 'symbol' || cell === 'scrip' || cell === 'instrument' || cell === 'ticker') {
+        symbolCol = c;
+      } else if (
+        symbolCol === -1 &&
+        (cell.includes('symbol') ||
+         cell.includes('instrument') ||
+         cell.includes('scrip') ||
+         cell.includes('stock') ||
+         cell.includes('security') ||
+         cell.includes('company'))
       ) {
-        if (symbolCol === -1) symbolCol = c;
+        symbolCol = c;
       } else if (
         cell.includes('qty') ||
         cell.includes('quantity') ||
@@ -418,6 +487,13 @@ export async function parseExcelHoldings(file: File): Promise<ParsedHoldingItem[
         cell.includes('available qty')
       ) {
         if (qtyCol === -1) qtyCol = c;
+      } else if (
+        cell === 'value' ||
+        cell.includes('investment') ||
+        cell.includes('current val') ||
+        cell.includes('total amount')
+      ) {
+        if (valueCol === -1) valueCol = c;
       } else if (
         cell.includes('buy price') ||
         cell.includes('avg price') ||
@@ -458,15 +534,22 @@ export async function parseExcelHoldings(file: File): Promise<ParsedHoldingItem[
     }
 
     const rawQty = parseNumberCell(row[qtyCol]);
-    let rawPrice = priceCol !== -1 ? parseNumberCell(row[priceCol]) : 0;
+    let rawPrice = 0;
+    const rawVal = valueCol !== -1 ? parseNumberCell(row[valueCol]) : 0;
+
+    if (rawVal > 0 && rawQty > 0 && priceCol === -1) {
+      rawPrice = rawVal / rawQty;
+    } else if (priceCol !== -1) {
+      rawPrice = parseNumberCell(row[priceCol]);
+    }
 
     // Fallback scan for price if designated column had 0
     if (rawPrice <= 0) {
       for (let c = 0; c < row.length; c++) {
-        if (c !== symbolCol && c !== qtyCol) {
+        if (c !== symbolCol && c !== qtyCol && c !== valueCol) {
           const val = parseNumberCell(row[c]);
-          if (val > 0.5 && val < 500000 && val !== rawQty) {
-            rawPrice = val;
+          if (val > 0.05 && val < 500000 && val !== rawQty) {
+            rawPrice = rawQty > 1 && val > rawQty * 10 ? val / rawQty : val;
             break;
           }
         }

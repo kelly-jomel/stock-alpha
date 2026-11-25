@@ -125,6 +125,21 @@ export const STOCK_UNIVERSE: StockUniverseItem[] = [
   // 10. Precious Metals & ETFs
   { symbol: 'SILVERBEES.NS', name: 'Nippon India Silver ETF', exchange: 'NSE', sector: 'Commodities & ETFs' },
   { symbol: 'GOLDBEES.NS', name: 'Nippon India Gold ETF', exchange: 'NSE', sector: 'Commodities & ETFs' },
+  { symbol: 'TATAGOLD.NS', name: 'Tata Gold ETF', exchange: 'NSE', sector: 'Commodities & ETFs' },
+
+  // 11. Additional Broker Portfolio Equities
+  { symbol: 'CCAVENUE.NS', name: 'AvenuesAI Limited', exchange: 'NSE', sector: 'Information Technology' },
+  { symbol: 'ABLBL.NS', name: 'Aditya Birla Lifestyle Brands', exchange: 'NSE', sector: 'Consumer Goods & Retail' },
+  { symbol: 'TMPV.NS', name: 'Tata Motors Passenger Vehicles', exchange: 'NSE', sector: 'Automobile & EV' },
+  { symbol: 'RVNL.NS', name: 'Rail Vikas Nigam Limited', exchange: 'NSE', sector: 'Capital Goods & Defense' },
+  { symbol: 'RTNINDIA.NS', name: 'RattanIndia Enterprises', exchange: 'NSE', sector: 'Information Technology' },
+  { symbol: 'JBMA.NS', name: 'JBM Auto Limited', exchange: 'NSE', sector: 'Automobile & EV' },
+  { symbol: 'OLECTRA.NS', name: 'Olectra Greentech Limited', exchange: 'NSE', sector: 'Automobile & EV' },
+  { symbol: 'HYUNDAI.NS', name: 'Hyundai Motor India Ltd', exchange: 'NSE', sector: 'Automobile & EV' },
+  { symbol: 'JKTYRE.NS', name: 'JK Tyre & Industries Ltd', exchange: 'NSE', sector: 'Automobile & EV' },
+  { symbol: 'LGEINDIA.NS', name: 'LG Electronics India Ltd', exchange: 'NSE', sector: 'Consumer Goods & Retail' },
+  { symbol: 'ETHOSLTD.NS', name: 'Ethos Limited', exchange: 'NSE', sector: 'Consumer Goods & Retail' },
+  { symbol: 'INDHOTEL.NS', name: 'The Indian Hotels Co. Ltd', exchange: 'NSE', sector: 'Consumer Goods & Retail' },
 
   // Benchmark Indices
   { symbol: '^NSEI', name: 'NIFTY 50 Index', exchange: 'NSE', sector: 'Benchmark Index' },
