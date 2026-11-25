@@ -56,6 +56,10 @@ export async function GET(request: Request) {
     // 5. Pattern & KeyStocks Setup Condition
     if (patternCondition === 'BREAKOUT' && !technicals.patternsDetected.some(p => p.name.includes('Breakout'))) return false;
     if (patternCondition === 'DOUBLE_BOTTOM' && !technicals.patternsDetected.some(p => p.name.includes('Double Bottom'))) return false;
+    if (patternCondition === 'HARMONIC_ABCD' && !technicals.patternsDetected.some(p => p.name.includes('Harmonic') || p.name.includes('ABCD'))) return false;
+    if (patternCondition === 'WOLFE_WAVE' && !technicals.patternsDetected.some(p => p.name.includes('Wolfe Wave'))) return false;
+    if (patternCondition === 'FIB_BOUNCE' && !technicals.patternsDetected.some(p => p.name.includes('Fibonacci') || p.name.includes('Fib'))) return false;
+    if (patternCondition === 'CANDLE_BULLISH' && !technicals.patternsDetected.some(p => p.name.includes('Hammer') || p.name.includes('Engulfing'))) return false;
     if (patternCondition === 'GAP_UP' && (!technicals.gaps?.hasGap || technicals.gaps.type !== 'GAP_UP')) return false;
     if (patternCondition === 'GAP_DOWN' && (!technicals.gaps?.hasGap || technicals.gaps.type !== 'GAP_DOWN')) return false;
     if (patternCondition === 'PIVOT_BREAKOUT' && (!technicals.pivots || quote.price <= technicals.pivots.classic.r1)) return false;

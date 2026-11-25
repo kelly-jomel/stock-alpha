@@ -14,8 +14,22 @@ import {
   ShieldCheck,
   Zap,
   Building2,
-  Layers
+  Layers,
+  Terminal,
+  Bell,
+  Plus,
+  Trash2,
+  Sparkles
 } from 'lucide-react';
+
+interface CustomQueryRule {
+  id: string;
+  field: 'price' | 'rsi' | 'ema20' | 'ema50' | 'ema200' | 'peRatio' | 'roic' | 'volume';
+  operator: '>' | '<' | '>=' | '<=';
+  compareWith: 'value' | 'field';
+  targetValue: number;
+  targetField?: 'price' | 'ema20' | 'ema50' | 'ema200';
+}
 
 interface ScanResult {
   quote: StockQuote;
@@ -28,8 +42,18 @@ interface Props {
 }
 
 export default function KeyStockScanner({ onSelectStock }: Props) {
-  // Mode: All, Fundamental, or Technical
-  const [screenerMode, setScreenerMode] = useState<'all' | 'fundamental' | 'technical'>('all');
+  // Mode: All, Fundamental, Technical, or Custom Query Builder
+  const [screenerMode, setScreenerMode] = useState<'all' | 'fundamental' | 'technical' | 'customQuery'>('all');
+
+  // KeyStocks Visual Custom Query Builder State
+  const [customRules, setCustomRules] = useState<CustomQueryRule[]>([
+    { id: '1', field: 'price', operator: '>', compareWith: 'field', targetValue: 0, targetField: 'ema50' },
+    { id: '2', field: 'rsi', operator: '>', compareWith: 'value', targetValue: 55 }
+  ]);
+
+  // Alert System State
+  const [alertEnabled, setAlertEnabled] = useState(false);
+  const [activeAlertCount, setActiveAlertCount] = useState(0);
 
   // Search input state
   const [searchQuery, setSearchQuery] = useState('');
@@ -339,6 +363,10 @@ export default function KeyStockScanner({ onSelectStock }: Props) {
                     <option value="ALL">Any Pattern</option>
                     <option value="BREAKOUT">60-Day Resistance Breakout</option>
                     <option value="DOUBLE_BOTTOM">Double Bottom (W-Shape)</option>
+                    <option value="HARMONIC_ABCD">Harmonic ABCD Wave</option>
+                    <option value="WOLFE_WAVE">Wolfe Wave Wedge (Point 5)</option>
+                    <option value="FIB_BOUNCE">Fibonacci 61.8% Golden Bounce</option>
+                    <option value="CANDLE_BULLISH">Bullish Candle (Hammer / Engulfing)</option>
                     <option value="GAP_UP">↗ Bullish Gap Up</option>
                     <option value="GAP_DOWN">↘ Bearish Gap Down</option>
                     <option value="PIVOT_BREAKOUT">⚡ Classic Pivot R1 Breakout</option>
