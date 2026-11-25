@@ -63,7 +63,7 @@ export default function PortfolioView({ onSelectStock }: Props) {
   useEffect(() => {
     async function loadPortfolio() {
       setLoading(true);
-      const saved = localStorage.getItem('keystock_portfolio');
+      const saved = localStorage.getItem('stock_alpha_portfolio') || localStorage.getItem('Alpha_portfolio');
       let baseList: Array<{ symbol: string; shares: number; avgBuy: number }> = [];
 
       if (saved) {
@@ -84,7 +84,7 @@ export default function PortfolioView({ onSelectStock }: Props) {
 
     // Auto-refresh portfolio current prices and live P&L every 10 seconds
     const interval = setInterval(() => {
-      const saved = localStorage.getItem('keystock_portfolio');
+      const saved = localStorage.getItem('stock_alpha_portfolio') || localStorage.getItem('Alpha_portfolio');
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
@@ -166,7 +166,7 @@ export default function PortfolioView({ onSelectStock }: Props) {
 
       setHoldings(enriched);
       localStorage.setItem(
-        'keystock_portfolio',
+        'stock_alpha_portfolio',
         JSON.stringify(rawHoldings.map(h => ({ symbol: h.symbol, shares: h.shares, avgBuy: h.avgBuy })))
       );
     } catch (e) {
@@ -529,7 +529,8 @@ export default function PortfolioView({ onSelectStock }: Props) {
           {holdings.length > 0 && (
             <button
               onClick={() => {
-                localStorage.removeItem('keystock_portfolio');
+                localStorage.removeItem('stock_alpha_portfolio');
+                localStorage.removeItem('Alpha_portfolio');
                 setHoldings([]);
               }}
               className="text-xs text-rose-600 hover:text-rose-700 font-semibold"

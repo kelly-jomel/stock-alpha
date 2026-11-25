@@ -18,7 +18,7 @@ export interface AlphaSignal {
 }
 
 export function generateAlphaMarketSignals(): AlphaSignal[] {
-  // KeyStocks Algorithmic Scanning Engine
+  // Alpha Algorithmic Scanning Engine
   const signals: AlphaSignal[] = [
     {
       symbol: 'TATAMOTORS.NS',

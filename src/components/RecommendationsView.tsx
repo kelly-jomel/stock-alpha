@@ -52,7 +52,7 @@ export default function RecommendationsView({ onSelectStock, onAddToPortfolio }:
         }
 
         // Read portfolio from localStorage to calculate recommended rebalance quantity
-        const saved = localStorage.getItem('keystock_portfolio');
+        const saved = localStorage.getItem('stock_alpha_portfolio') || localStorage.getItem('Alpha_portfolio');
         if (saved) {
           setPortfolioHoldings(JSON.parse(saved));
         }
@@ -101,7 +101,7 @@ export default function RecommendationsView({ onSelectStock, onAddToPortfolio }:
   const totalRecommendedCost = Number((recommendedShares * stockPrice).toFixed(2));
 
   const handleQuickAdd = (symbol: string, shares: number, price: number) => {
-    const saved = localStorage.getItem('keystock_portfolio');
+    const saved = localStorage.getItem('stock_alpha_portfolio') || localStorage.getItem('Alpha_portfolio');
     let list: Array<{ symbol: string; shares: number; avgBuy: number }> = saved ? JSON.parse(saved) : [];
     const idx = list.findIndex(h => h.symbol === symbol);
 
@@ -111,7 +111,7 @@ export default function RecommendationsView({ onSelectStock, onAddToPortfolio }:
       list.push({ symbol, shares, avgBuy: price });
     }
 
-    localStorage.setItem('keystock_portfolio', JSON.stringify(list));
+    localStorage.setItem('stock_alpha_portfolio', JSON.stringify(list));
     setPortfolioHoldings(list);
     setAddedSuccess(`Added ${shares} shares of ${symbol.replace('.NS', '')} to your portfolio!`);
     setTimeout(() => setAddedSuccess(null), 3500);

@@ -256,7 +256,7 @@ export default function StockChart({
       stLine.setData(stData.map(s => ({ time: s.time, value: s.value })));
     }
 
-    // 6. KeyStocks Pivot Points Overlay (P, R1, R2, S1, S2)
+    // 6. Alpha Pivot Points Overlay (P, R1, R2, S1, S2)
     if (showPivots && technicals?.pivots && times.length > 0) {
       const pData = technicals.pivots[pivotType];
       if (pData) {
@@ -403,7 +403,7 @@ export default function StockChart({
             )}
           </div>
 
-          {/* KeyStocks Interactive Bar Replay Controls */}
+          {/* Alpha Interactive Bar Replay Controls */}
           <div className="flex items-center gap-1.5 flex-wrap">
             <button
               onClick={handleStartReplay}
@@ -516,7 +516,7 @@ export default function StockChart({
             RSI
           </button>
 
-          {/* KeyStocks Pivots Toggle & Selector */}
+          {/* Alpha Pivots Toggle & Selector */}
           <div className="flex items-center gap-1 ml-auto">
             <button
               onClick={() => setShowPivots(!showPivots)}

@@ -43,7 +43,7 @@ export async function GET(request: Request) {
     if (investorFilter === 'DALIO' && investorScores.dalio.score < 65) return false;
     if (investorFilter === 'WOOD' && investorScores.wood.score < 65) return false;
 
-    // 3. Moving Average setup (KeyStocks feature)
+    // 3. Moving Average setup (Alpha feature)
     if (maSetup === 'MA_CONVERGENCE' && !technicals.maConvergence.isConverging) return false;
     if (maSetup === 'ABOVE_200EMA' && quote.price < technicals.ema200) return false;
     if (maSetup === 'GOLDEN_CROSS' && technicals.ema50 < technicals.ema200) return false;
@@ -53,7 +53,7 @@ export async function GET(request: Request) {
     if (rsiCondition === 'OVERBOUGHT' && technicals.rsi14 <= 70) return false;
     if (rsiCondition === 'BULLISH_MOMENTUM' && (technicals.rsi14 < 50 || technicals.rsi14 > 68)) return false;
 
-    // 5. Pattern & KeyStocks Setup Condition
+    // 5. Pattern & Alpha Setup Condition
     if (patternCondition === 'BREAKOUT' && !technicals.patternsDetected.some(p => p.name.includes('Breakout'))) return false;
     if (patternCondition === 'DOUBLE_BOTTOM' && !technicals.patternsDetected.some(p => p.name.includes('Double Bottom'))) return false;
     if (patternCondition === 'HARMONIC_ABCD' && !technicals.patternsDetected.some(p => p.name.includes('Harmonic') || p.name.includes('ABCD'))) return false;

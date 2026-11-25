@@ -196,7 +196,7 @@ export function detectTechnicalIndicators(candles: Candle[]): TechnicalIndicator
   const signalLine = macdLine * 0.85; // approximate signal for prompt response
   const histogram = macdLine - signalLine;
 
-  // KeyStocks Specialty: Moving Average Convergence Scan
+  // Alpha Specialty: Moving Average Convergence Scan
   // Measures how tightly coiled EMA20, EMA50, and EMA200 are (Energy buildup before big explosive moves)
   const mas = [ema20, ema50, ema200].filter(v => v > 0);
   const maxMA = Math.max(...mas);
@@ -204,14 +204,14 @@ export function detectTechnicalIndicators(candles: Candle[]): TechnicalIndicator
   const spreadPercent = mas.length > 1 ? ((maxMA - minMA) / minMA) * 100 : 0;
   const isConverging = spreadPercent < 3.2; // tighter than 3.2% means ultra-compressed coiled springs
 
-  // Pattern Detection (KeyStocks patterns: Double Bottom, Wolfe Wave / ABCD Harmonic, Breakout)
+  // Pattern Detection (Alpha patterns: Double Bottom, Wolfe Wave / ABCD Harmonic, Breakout)
   const patterns: { name: string; type: 'bullish' | 'bearish' | 'neutral'; description: string; confidence: number }[] = [];
 
   // Check 52-week or 60-bar high breakout
   const recentHigh = Math.max(...candles.slice(Math.max(0, n - 60), n - 1).map(c => c.high));
   if (currentPrice > recentHigh) {
     patterns.push({
-      name: 'KeyStocks Resistance Breakout',
+      name: 'Alpha Resistance Breakout',
       type: 'bullish',
       description: `Price broke out above 60-period swing resistance of ₹${recentHigh.toFixed(1)} on high volume expansion`,
       confidence: 90
@@ -236,14 +236,14 @@ export function detectTechnicalIndicators(candles: Candle[]): TechnicalIndicator
   // Harmonic ABCD Setup Detection
   if (isConverging && currentPrice > ema50) {
     patterns.push({
-      name: 'KeyStocks MA Energy Coil (Squeeze)',
+      name: 'MA Energy Coil (Squeeze)',
       type: 'bullish',
       description: `20, 50, and 200 EMAs are compressed within ${spreadPercent.toFixed(1)}% band, indicating imminent volatility breakout`,
       confidence: 88
     });
   }
 
-  // Wolfe Wave / Harmonic ABCD & Advanced KeyStocks Setups
+  // Wolfe Wave / Harmonic ABCD & Advanced Alpha Setups
   if (n >= 25) {
     // 1. Fibonacci Retracement Scan (Swing High to Low calculation)
     const swingHigh = Math.max(...candles.slice(n - 25, n - 5).map(c => c.high));
@@ -370,7 +370,7 @@ export function detectTechnicalIndicators(candles: Candle[]): TechnicalIndicator
   const resistances = [Number(recentHighs[0].toFixed(1)), Number(recentHighs[Math.floor(recentHighs.length * 0.2)].toFixed(1))];
   const supports = [Number(recentLows[0].toFixed(1)), Number(recentLows[Math.floor(recentLows.length * 0.2)].toFixed(1))];
 
-  // KeyStocks Pivots & Gap Calculations
+  // Alpha Pivots & Gap Calculations
   const lastCandle = candles[candles.length - 1];
   const prevCandle = candles.length >= 2 ? candles[candles.length - 2] : lastCandle;
   const pivots = calculatePivotPoints(prevCandle.high, prevCandle.low, prevCandle.close, prevCandle.open);

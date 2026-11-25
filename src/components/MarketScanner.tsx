@@ -41,11 +41,11 @@ interface Props {
   onSelectStock: (symbol: string) => void;
 }
 
-export default function KeyStockScanner({ onSelectStock }: Props) {
+export default function MarketScanner({ onSelectStock }: Props) {
   // Mode: All, Fundamental, Technical, or Custom Query Builder
   const [screenerMode, setScreenerMode] = useState<'all' | 'fundamental' | 'technical' | 'customQuery'>('all');
 
-  // KeyStocks Visual Custom Query Builder State
+  // Visual Custom Query Builder State
   const [customRules, setCustomRules] = useState<CustomQueryRule[]>([
     { id: '1', field: 'price', operator: '>', compareWith: 'field', targetValue: 0, targetField: 'ema50' },
     { id: '2', field: 'rsi', operator: '>', compareWith: 'value', targetValue: 55 }
@@ -139,7 +139,7 @@ export default function KeyStockScanner({ onSelectStock }: Props) {
         // Apply technical client-side constraints
         if (priceAboveEMA200) list = list.filter(r => r.quote.price > r.technicals.ema200);
 
-        // Apply KeyStocks Custom Query Rules (if active)
+        // Apply Alpha Custom Query Rules (if active)
         if (screenerMode === 'customQuery' && customRules.length > 0) {
           list = list.filter(r => {
             return customRules.every(rule => {
@@ -240,7 +240,7 @@ export default function KeyStockScanner({ onSelectStock }: Props) {
               <Bell className="w-5 h-5 fill-white" />
             </div>
             <div>
-              <div className="font-bold text-sm">KeyStocks Real-Time Alert Triggered!</div>
+              <div className="font-bold text-sm">Real-Time Technical Alert Triggered!</div>
               <div className="text-xs text-amber-100">
                 {activeAlertCount} stock{activeAlertCount > 1 ? 's' : ''} matched your active query conditions during this scan.
               </div>
@@ -339,13 +339,13 @@ export default function KeyStockScanner({ onSelectStock }: Props) {
           </div>
         </div>
 
-        {/* Custom Query Builder Panel (KeyStocks Feature) */}
+        {/* Custom Query Builder Panel (Alpha Feature) */}
         {screenerMode === 'customQuery' && (
           <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-5 mb-5 space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-bold text-indigo-950 flex items-center gap-2">
-                  <Terminal className="w-4 h-4 text-indigo-600" /> KeyStocks Visual Query &amp; Condition Builder
+                  <Terminal className="w-4 h-4 text-indigo-600" /> Visual Query &amp; Condition Builder
                 </h3>
                 <p className="text-xs text-indigo-700/80">
                   Combine any price action, momentum, or valuation rules without coding (e.g. Close &gt; EMA 50 AND RSI &gt; 55)

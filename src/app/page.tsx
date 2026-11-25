@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import StockChart from '@/components/StockChart';
 import InvestorDashboard from '@/components/InvestorDashboard';
-import KeyStockScanner from '@/components/KeyStockScanner';
+import MarketScanner from '@/components/MarketScanner';
 import PortfolioView from '@/components/PortfolioView';
 import ExploreView from '@/components/ExploreView';
 import RecommendationsView from '@/components/RecommendationsView';
@@ -11,7 +11,7 @@ import MarketMoversAllView from '@/components/MarketMoversAllView';
 import GoogleSignInModal, { UserProfile } from '@/components/GoogleSignInModal';
 import LiveTickerTape from '@/components/LiveTickerTape';
 import LandingPageView from '@/components/LandingPageView';
-import KeyStockAlphaSignalsView from '@/components/KeyStockAlphaSignalsView';
+import AlphaSignalsView from '@/components/AlphaSignalsView';
 import GrowwPeersComparison from '@/components/GrowwPeersComparison';
 import { StockQuote, Candle, TechnicalIndicators, InvestorScores } from '@/types/stock';
 import { STOCK_UNIVERSE } from '@/lib/stockData';
@@ -58,7 +58,7 @@ export default function Home() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
-  // Bar Replay state for KeyStocks backtester
+  // Bar Replay state for Alpha backtester
   const [replayIdx, setReplayIdx] = useState<number>(-1);
   const [isReplaying, setIsReplaying] = useState(false);
 
@@ -362,7 +362,7 @@ export default function Home() {
               }`}
             >
               <Zap className="w-3.5 h-3.5 text-indigo-600" />
-              <span>KeyStocks Alpha</span>
+              <span>Alpha Signals</span>
             </button>
             <button
               onClick={() => setActiveTab('terminal')}
@@ -453,9 +453,9 @@ export default function Home() {
           <PortfolioView onSelectStock={handleSelectStock} />
         )}
 
-        {/* PAGE 4: Quantitative & KeyStocks Screener */}
+        {/* PAGE 4: Quantitative Screener */}
         {activeTab === 'screener' && (
-          <KeyStockScanner onSelectStock={handleSelectStock} />
+          <MarketScanner onSelectStock={handleSelectStock} />
         )}
 
         {/* PAGE 5: Terminal & In-depth Technicals */}
@@ -498,7 +498,7 @@ export default function Home() {
               </div>
             )}
 
-            {/* KeyStocks Bar Replay Simulator Control Bar */}
+            {/* Interactive Bar Replay Simulator Control Bar */}
             <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs flex flex-wrap items-center justify-between gap-3 text-xs">
               <div className="flex items-center gap-2">
                 <span className="font-bold text-slate-800 flex items-center gap-1.5">
@@ -630,9 +630,9 @@ export default function Home() {
           </div>
         )}
 
-        {/* KeyStocks High-Probability Alpha Signals Tab */}
+        {/* High-Probability Alpha Signals Tab */}
         {activeTab === 'alpha-signals' && (
-          <KeyStockAlphaSignalsView onSelectStock={handleSelectStock} />
+          <AlphaSignalsView onSelectStock={handleSelectStock} />
         )}
       </main>
 

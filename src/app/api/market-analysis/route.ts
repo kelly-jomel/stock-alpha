@@ -63,7 +63,7 @@ export async function GET() {
       summary = 'Macro liquidity is favorable with over 70% of securities holding institutional support above the 200 EMA. Druckenmiller & Dalio momentum indicators confirm risk-on capital deployment.';
     } else if (marketBreadthPercent >= 45) {
       regime = 'SELECTIVE / QUALITY-LEAD';
-      summary = 'Selective consolidation regime. Broader indices are range-bound; alpha is concentrated in high-ROIC Buffett compounders and stocks with tight KeyStocks moving average squeezes.';
+      summary = 'Selective consolidation regime. Broader indices are range-bound; alpha is concentrated in high-ROIC compounders and stocks with tight moving average squeezes.';
     } else {
       regime = 'DEFENSIVE / TRANSITION';
       summary = 'Defensive market posture. High volatility with deteriorating technical breadth. High cash buffers and strict stop-loss adherence recommended.';
@@ -109,7 +109,7 @@ export async function GET() {
           catalystReasons.push(`Druckenmiller Trend: Price (₹${quote.price}) leading above 50 and 200 EMA`);
         }
         if (technicals.maConvergence.isConverging) {
-          catalystReasons.push(`KeyStocks Energy Squeeze: 20/50/200 EMAs compressed within ${technicals.maConvergence.spreadPercent}%`);
+          catalystReasons.push(`Energy Squeeze: 20/50/200 EMAs compressed within ${technicals.maConvergence.spreadPercent}%`);
         }
         if (technicals.patternsDetected.length > 0) {
           catalystReasons.push(`Pattern: ${technicals.patternsDetected[0].name} (${technicals.patternsDetected[0].confidence}% confidence)`);

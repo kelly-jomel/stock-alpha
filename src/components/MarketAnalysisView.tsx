@@ -266,7 +266,7 @@ export default function MarketAnalysisView({ onSelectStock }: Props) {
                       </div>
 
                       <div className="p-2 rounded-lg border bg-indigo-950/40 border-indigo-500/30 text-indigo-300 flex items-center gap-1.5">
-                        <Zap className="w-3.5 h-3.5 shrink-0" /> KeyStocks Squeeze
+                        <Zap className="w-3.5 h-3.5 shrink-0" /> Alpha Energy Squeeze
                       </div>
                     </div>
                   </div>
