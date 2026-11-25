@@ -11,6 +11,7 @@ import CloudSyncStatusBadge from '@/components/CloudSyncStatusBadge';
 import LiveTickerTape from '@/components/LiveTickerTape';
 import LandingPageView from '@/components/LandingPageView';
 import ProTerminalView from '@/components/ProTerminalView';
+import KeyStocksTerminalView from '@/components/KeyStocksTerminalView';
 import UnifiedPortfolioHub from '@/components/UnifiedPortfolioHub';
 import { StockQuote, Candle, TechnicalIndicators, InvestorScores } from '@/types/stock';
 import { STOCK_UNIVERSE } from '@/lib/stockData';
@@ -36,7 +37,7 @@ import {
 
 export default function Home() {
   const [selectedSymbol, setSelectedSymbol] = useState<string>('RELIANCE.NS');
-  const [activeTab, setActiveTab] = useState<'explore' | 'portfolio' | 'screener' | 'terminal' | 'market-movers-all'>('explore');
+  const [activeTab, setActiveTab] = useState<'keystocks' | 'explore' | 'portfolio' | 'screener' | 'terminal' | 'market-movers-all'>('keystocks');
   const [loading, setLoading] = useState<boolean>(true);
   const [range, setRange] = useState<string>('1y');
   const [chartInterval, setChartInterval] = useState<string>('1d');
@@ -209,33 +210,14 @@ export default function Home() {
 
   const activeCandles = replayIdx >= 0 ? candles.slice(0, replayIdx + 1) : candles;
 
-  // Render Landing Page as default gate for unauthenticated users
-  if (!user && !hasStartedGuestSession) {
-    return (
-      <>
-        <LandingPageView
-          onSignInClick={() => setIsSignInModalOpen(true)}
-          onExploreDemo={() => setHasStartedGuestSession(true)}
-        />
-        <GoogleSignInModal
-          isOpen={isSignInModalOpen}
-          onClose={() => setIsSignInModalOpen(false)}
-          user={user}
-          onSignIn={handleSignIn}
-          onSignOut={handleSignOut}
-        />
-      </>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-slate-50/60 text-slate-900 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
-      {/* Modern Clean Header (De-cluttered aesthetic - NO top-right select dropdown) */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-6 py-2.5">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-6">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
+      {/* Modern Clean Header */}
+      <header className="sticky top-0 z-50 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-6 py-2.5">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-6">
           {/* Logo & Brand Name */}
           <div
-            onClick={() => setActiveTab('explore')}
+            onClick={() => setActiveTab('keystocks')}
             className="flex items-center gap-2.5 cursor-pointer group shrink-0"
           >
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 flex items-center justify-center shadow-xs">
@@ -243,9 +225,9 @@ export default function Home() {
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-bold text-lg text-slate-900 tracking-tight">Stock Alpha</span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold uppercase">
-                  NSE/BSE
+                <span className="font-bold text-lg text-white tracking-tight">KeyStocks</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-emerald-950 text-emerald-400 border border-emerald-800 font-bold uppercase">
+                  Workstation
                 </span>
               </div>
             </div>
@@ -312,15 +294,25 @@ export default function Home() {
             )}
           </div>
 
-          {/* Clean Top Navigation Links */}
-          {/* Clean 4-Pillar Modern Navigation */}
-          <nav className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 shrink-0">
+          {/* Clean 5-Pillar Modern Navigation */}
+          <nav className="flex items-center gap-1.5 text-xs font-semibold text-slate-300 shrink-0">
+            <button
+              onClick={() => setActiveTab('keystocks')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
+                activeTab === 'keystocks'
+                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold shadow-xs'
+                  : 'hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5 text-emerald-400" />
+              <span>KeyStocks Terminal</span>
+            </button>
             <button
               onClick={() => setActiveTab('explore')}
               className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
                 activeTab === 'explore'
-                  ? 'bg-slate-100 text-slate-900 font-bold shadow-2xs'
-                  : 'hover:text-slate-900 hover:bg-slate-50'
+                  ? 'bg-slate-800 text-white font-bold shadow-2xs'
+                  : 'hover:text-white hover:bg-slate-800'
               }`}
             >
               Explore
@@ -329,30 +321,30 @@ export default function Home() {
               onClick={() => setActiveTab('portfolio')}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
                 activeTab === 'portfolio'
-                  ? 'bg-emerald-50 text-emerald-800 font-bold border border-emerald-200/80 shadow-2xs'
-                  : 'hover:text-slate-900 hover:bg-slate-50'
+                  ? 'bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30 shadow-2xs'
+                  : 'hover:text-white hover:bg-slate-800'
               }`}
             >
-              <Wallet className="w-3.5 h-3.5 text-emerald-600" />
+              <Wallet className="w-3.5 h-3.5 text-emerald-400" />
               <span>Portfolio &amp; Ideas</span>
             </button>
             <button
               onClick={() => setActiveTab('screener')}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
                 activeTab === 'screener'
-                  ? 'bg-slate-100 text-slate-900 font-bold shadow-2xs'
-                  : 'hover:text-slate-900 hover:bg-slate-50'
+                  ? 'bg-slate-800 text-white font-bold shadow-2xs'
+                  : 'hover:text-white hover:bg-slate-800'
               }`}
             >
-              <Sliders className="w-3.5 h-3.5 text-indigo-600" />
+              <Sliders className="w-3.5 h-3.5 text-indigo-400" />
               <span>Screener &amp; Signals</span>
             </button>
             <button
               onClick={() => setActiveTab('terminal')}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
                 activeTab === 'terminal'
-                  ? 'bg-slate-900 text-white font-bold shadow-xs'
-                  : 'hover:text-slate-900 hover:bg-slate-50'
+                  ? 'bg-slate-800 text-white font-bold shadow-xs'
+                  : 'hover:text-white hover:bg-slate-800'
               }`}
             >
               <LineChart className="w-3.5 h-3.5 text-emerald-400" />
@@ -411,7 +403,12 @@ export default function Home() {
       <LiveTickerTape onSelectStock={handleSelectStock} />
 
       {/* Main Page Body */}
-      <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6">
+      <main className="flex-1 w-full mx-auto p-2 sm:p-4">
+        {/* PAGE 0: KeyStocks Terminal Workstation (Original Replica with All Features) */}
+        {activeTab === 'keystocks' && (
+          <KeyStocksTerminalView />
+        )}
+
         {/* PAGE 1: Market Explore */}
         {activeTab === 'explore' && (
           <ExploreView
