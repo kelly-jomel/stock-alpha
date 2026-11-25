@@ -5,7 +5,7 @@ import { StockQuote, Candle, TechnicalIndicators, InvestorScores } from '@/types
 import { STOCK_UNIVERSE } from '@/lib/stockData';
 import StockChart from '@/components/StockChart';
 import InvestorDashboard from '@/components/InvestorDashboard';
-import GrowwPeersComparison from '@/components/GrowwPeersComparison';
+import PeersComparison from '@/components/PeersComparison';
 import {
   Search,
   TrendingUp,
@@ -40,7 +40,7 @@ interface Props {
   lastLiveTickTime: string;
 }
 
-export default function GrowwTerminalView({
+export default function ProTerminalView({
   selectedSymbol,
   onSelectStock,
   quote,
@@ -64,7 +64,7 @@ export default function GrowwTerminalView({
 
   const activeCandles = replayIdx >= 0 ? candles.slice(0, replayIdx + 1) : candles;
 
-  // 52-Week Range metrics (Groww style)
+  // 52-Week Range metrics (Institutional style)
   const currentPrice = quote?.price || 1000;
   const high52 = quote?.fiftyTwoWeekHigh || currentPrice * 1.25;
   const low52 = quote?.fiftyTwoWeekLow || currentPrice * 0.75;
@@ -102,7 +102,7 @@ export default function GrowwTerminalView({
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-12 animate-in fade-in">
-      {/* 1. Terminal Top Bar: Dedicated Stock Search + Live Stock Quote Header (Groww Style) */}
+      {/* 1. Terminal Top Bar: Dedicated Stock Search + Live Stock Quote Header (Institutional Style) */}
       <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-xs space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-100">
           {/* Dedicated Terminal Stock Search */}
@@ -157,7 +157,7 @@ export default function GrowwTerminalView({
           </div>
         </div>
 
-        {/* Stock Title, Price & 52-Week Range Slider (Classic Groww Feature) */}
+        {/* Stock Title, Price & 52-Week Range Slider (Classic Pro Feature) */}
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           <div>
             <div className="flex items-center gap-3">
@@ -192,7 +192,7 @@ export default function GrowwTerminalView({
             </div>
           </div>
 
-          {/* Groww Range Sliders: Day High/Low & 52W High/Low */}
+          {/* Price Range Sliders: Day High/Low & 52W High/Low */}
           <div className="w-full lg:w-96 space-y-3 bg-slate-50/90 p-4 rounded-2xl border border-slate-100 text-xs">
             {/* Today's Low / High */}
             <div>
@@ -282,8 +282,8 @@ export default function GrowwTerminalView({
         )}
       </div>
 
-      {/* 3. Groww Peer Comparison Table */}
-      <GrowwPeersComparison
+      {/* 3. Industry Peer Comparison Table */}
+      <PeersComparison
         currentSymbol={selectedSymbol}
         onSelectStock={onSelectStock}
       />

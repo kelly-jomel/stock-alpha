@@ -19,7 +19,7 @@ interface PeerItem {
   divYield: number;
 }
 
-export default function GrowwPeersComparison({ currentSymbol, onSelectStock }: Props) {
+export default function PeersComparison({ currentSymbol, onSelectStock }: Props) {
   // Sector peers dynamically mapped
   const peers: PeerItem[] = [
     {
@@ -80,7 +80,7 @@ export default function GrowwPeersComparison({ currentSymbol, onSelectStock }: P
         <div>
           <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
             <Layers className="w-4 h-4 text-emerald-600" />
-            Groww Peer Comparison
+            Industry Peer Comparison
           </h3>
           <p className="text-[11px] text-slate-400">Industry benchmark valuation vs top Indian competitors</p>
         </div>

@@ -9,7 +9,7 @@ import MarketMoversAllView from '@/components/MarketMoversAllView';
 import GoogleSignInModal, { UserProfile } from '@/components/GoogleSignInModal';
 import LiveTickerTape from '@/components/LiveTickerTape';
 import LandingPageView from '@/components/LandingPageView';
-import GrowwTerminalView from '@/components/GrowwTerminalView';
+import ProTerminalView from '@/components/ProTerminalView';
 import UnifiedPortfolioHub from '@/components/UnifiedPortfolioHub';
 import { StockQuote, Candle, TechnicalIndicators, InvestorScores } from '@/types/stock';
 import { STOCK_UNIVERSE } from '@/lib/stockData';
@@ -51,7 +51,7 @@ export default function Home() {
   const [hasStartedGuestSession, setHasStartedGuestSession] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
-  // Search input in header (Groww style clean search bar)
+  // Search input in header (Clean search bar)
   const [headerSearchQuery, setHeaderSearchQuery] = useState('');
   const [headerSearchResults, setHeaderSearchResults] = useState<Array<{ symbol: string; name: string; sector: string }>>([]);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -229,7 +229,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-slate-50/60 text-slate-900 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
-      {/* Modern Clean Header (De-cluttered Groww aesthetic - NO top-right select dropdown) */}
+      {/* Modern Clean Header (De-cluttered aesthetic - NO top-right select dropdown) */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-6 py-2.5">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-6">
           {/* Logo & Brand Name */}
@@ -355,7 +355,7 @@ export default function Home() {
               }`}
             >
               <LineChart className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Groww Terminal</span>
+              <span>Pro Terminal</span>
             </button>
           </nav>
 
@@ -410,7 +410,7 @@ export default function Home() {
 
       {/* Main Page Body */}
       <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6">
-        {/* PAGE 1: Market Explore (Groww style) */}
+        {/* PAGE 1: Market Explore */}
         {activeTab === 'explore' && (
           <ExploreView
             onSelectStock={handleSelectStock}
@@ -436,9 +436,9 @@ export default function Home() {
           <MarketScanner onSelectStock={handleSelectStock} />
         )}
 
-        {/* PAGE 4: Groww-Style Terminal & In-depth Technicals */}
+        {/* PAGE 4: Pro-Grade Terminal & In-depth Technicals */}
         {activeTab === 'terminal' && (
-          <GrowwTerminalView
+          <ProTerminalView
             selectedSymbol={selectedSymbol}
             onSelectStock={handleSelectStock}
             quote={quote}

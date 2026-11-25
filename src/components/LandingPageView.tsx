@@ -46,7 +46,7 @@ export default function LandingPageView({ onSignInClick, onExploreDemo }: Props)
           <nav className="hidden md:flex items-center gap-7 text-xs font-semibold text-slate-600">
             <a href="#features" className="hover:text-slate-900 transition-colors">Features</a>
             <a href="#portfolio-analysis" className="hover:text-slate-900 transition-colors">Portfolio Health</a>
-            <a href="#groww-preview" className="hover:text-slate-900 transition-colors">Groww Integration</a>
+            <a href="#broker-preview" className="hover:text-slate-900 transition-colors">Broker Sync</a>
             <a href="#security" className="hover:text-slate-900 transition-colors">Security</a>
           </nav>
 
@@ -105,7 +105,7 @@ export default function LandingPageView({ onSignInClick, onExploreDemo }: Props)
 
           <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
             Gain clarity on your Indian equity investments. Get algorithmic <strong>BUY / SELL / HOLD</strong> signals,
-            deep sector allocation diagnostics, real-time NSE/BSE updates, and upcoming seamless Groww integration.
+            deep sector allocation diagnostics, real-time NSE/BSE updates, and automated broker portfolio sync.
           </p>
 
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -177,7 +177,7 @@ export default function LandingPageView({ onSignInClick, onExploreDemo }: Props)
               <div className="w-24 h-24 rounded-full border-8 border-emerald-500 border-t-teal-400 border-r-indigo-500 border-b-amber-400 flex items-center justify-center my-2">
                 <span className="text-xs font-bold text-slate-700">100%</span>
               </div>
-              <h4 className="text-xs font-bold text-slate-800 mt-2">Groww-Style Donut Allocation</h4>
+              <h4 className="text-xs font-bold text-slate-800 mt-2">Dynamic Donut Allocation</h4>
               <p className="text-[11px] text-slate-500 mt-1">Automatic multi-sector risk balance across Banking, IT, Energy & Auto.</p>
             </div>
 
@@ -229,7 +229,7 @@ export default function LandingPageView({ onSignInClick, onExploreDemo }: Props)
               <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
                 <PieChart className="w-5 h-5" />
               </div>
-              <h3 className="text-base font-bold text-slate-900">Groww-Inspired Sector Allocation</h3>
+              <h3 className="text-base font-bold text-slate-900">Institutional Sector Allocation</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
                 Interactive SVG donut charts displaying your portfolio breakdown with rupee value and percentage share.
               </p>
@@ -251,25 +251,25 @@ export default function LandingPageView({ onSignInClick, onExploreDemo }: Props)
               </div>
               <h3 className="text-base font-bold text-slate-900">Instant Tradebook Import</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Import Excel and CSV order histories from Groww, Zerodha, Upstox, and AngelOne in seconds.
+                Import Excel and CSV order histories from leading Indian brokerages in seconds.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Groww Integration Preview Banner */}
-      <section id="groww-preview" className="py-16 px-6 bg-emerald-50/50">
+      {/* Broker Integration Preview Banner */}
+      <section id="broker-preview" className="py-16 px-6 bg-emerald-50/50">
         <div className="max-w-4xl mx-auto bg-gradient-to-br from-emerald-600 to-teal-700 rounded-3xl p-8 sm:p-10 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-3 max-w-xl text-center md:text-left">
             <span className="text-[11px] font-bold tracking-wider uppercase bg-white/20 px-2.5 py-1 rounded-full text-emerald-100">
-              Groww Integration
+              Broker Integration
             </span>
             <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              Direct Groww Sync Coming Soon
+              Direct Broker API Sync
             </h3>
             <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed">
-              Connect via your Groww Trading API token or drop your Groww Holdings Excel file to analyze your portfolio instantly without manual data entry.
+              Connect via your Trading API token or drop your broker Holdings Excel file to analyze your portfolio instantly without manual data entry.
             </p>
           </div>
           <button

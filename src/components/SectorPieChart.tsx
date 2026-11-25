@@ -15,7 +15,7 @@ interface Props {
 }
 
 const SECTOR_PALETTE = [
-  '#10b981', // Emerald (Groww primary)
+  '#10b981', // Emerald primary
   '#6366f1', // Indigo
   '#f59e0b', // Amber
   '#06b6d4', // Cyan

@@ -10,7 +10,7 @@ interface Props {
   onSyncSuccess: (holdings: PortfolioHolding[]) => void;
 }
 
-export default function GrowwSyncModal({ isOpen, onClose, onSyncSuccess }: Props) {
+export default function BrokerSyncModal({ isOpen, onClose, onSyncSuccess }: Props) {
   const [apiToken, setApiToken] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,17 +19,17 @@ export default function GrowwSyncModal({ isOpen, onClose, onSyncSuccess }: Props
 
   const handleSync = async () => {
     if (!apiToken.trim()) {
-      setError('Please enter your Groww API Token or click "Load Sample Groww Account"');
+      setError('Please enter your Broker API Token or click "Load Sample Broker Account"');
       return;
     }
 
     setIsLoading(true);
     setError(null);
 
-    // Simulate API call to https://api.groww.in/v1/holdings/user
+    // Simulate API call to https://api.broker.in/v1/holdings/user
     setTimeout(() => {
-      // High-grade institutional sample fetched from Groww trading API
-      const liveGrowwHoldings: PortfolioHolding[] = [
+      // High-grade institutional sample fetched from Broker trading API
+      const liveBrokerHoldings: PortfolioHolding[] = [
         {
           id: 'RELIANCE.NS',
           symbol: 'RELIANCE.NS',
@@ -97,7 +97,7 @@ export default function GrowwSyncModal({ isOpen, onClose, onSyncSuccess }: Props
       ];
 
       setIsLoading(false);
-      onSyncSuccess(liveGrowwHoldings);
+      onSyncSuccess(liveBrokerHoldings);
       onClose();
     }, 900);
   };
@@ -118,18 +118,18 @@ export default function GrowwSyncModal({ isOpen, onClose, onSyncSuccess }: Props
               <Key className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Sync Live Groww Portfolio</h2>
-              <p className="text-xs text-slate-500">Connect via official Groww Trading API token</p>
+              <h2 className="text-lg font-bold text-slate-900">Sync Live Broker Portfolio</h2>
+              <p className="text-xs text-slate-500">Connect via official Broker Trading API token</p>
             </div>
           </div>
 
           <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100 text-xs text-slate-600 space-y-2">
             <div className="flex items-center gap-2 font-semibold text-slate-800">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              How to get your Groww API Token:
+              How to get your Broker API Token:
             </div>
             <ol className="list-decimal pl-4 space-y-1 text-[11px] text-slate-500">
-              <li>Log in to your <strong>Groww Web Account</strong> (groww.in)</li>
+              <li>Log in to your <strong>Broker Web Account</strong> (broker.in)</li>
               <li>Go to <strong>Settings $\rightarrow$ Trading APIs</strong></li>
               <li>Generate your Access Token and paste it below</li>
             </ol>
@@ -144,7 +144,7 @@ export default function GrowwSyncModal({ isOpen, onClose, onSyncSuccess }: Props
 
           <div className="space-y-2">
             <label className="block text-xs font-semibold text-slate-700">
-              Groww Access Token / JWT
+              Broker Access Token / JWT
             </label>
             <input
               type="password"
@@ -158,12 +158,12 @@ export default function GrowwSyncModal({ isOpen, onClose, onSyncSuccess }: Props
           <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
             <button
               onClick={() => {
-                setApiToken('groww_live_token_verified_jwt_payload_9824');
+                setApiToken('broker_live_token_verified_jwt_payload_9824');
                 setTimeout(() => handleSync(), 100);
               }}
               className="w-full sm:w-auto flex-1 py-2.5 px-4 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all cursor-pointer"
             >
-              Demo Groww Account
+              Demo Broker Account
             </button>
             <button
               onClick={handleSync}

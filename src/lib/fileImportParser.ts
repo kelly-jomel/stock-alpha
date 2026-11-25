@@ -25,7 +25,7 @@ export interface ParsedTradeOrder {
 
 /**
  * Comprehensive mapping of Indian company names, broker descriptions, and abbreviations
- * as exported by Groww, Zerodha (Console/Kite), Upstox, AngelOne, ICICI Direct, and HDFC Sky.
+ * as exported by Zerodha (Console/Kite), Upstox, AngelOne, ICICI Direct, and HDFC Sky.
  */
 const INDIAN_NAME_MAP: Record<string, string> = {
   // Directly from user's broker export screenshot
@@ -271,7 +271,7 @@ export function consolidateOrders(orders: ParsedTradeOrder[]): ParsedHoldingItem
 }
 
 /**
- * Parses an Excel or CSV Order History statement (Zerodha tradebook/orderbook, Groww orders, Upstox, AngelOne).
+ * Parses an Excel or CSV Order History statement (Zerodha tradebook/orderbook, Upstox, AngelOne).
  * Recognizes Buy/Sell transaction types, quantities, execution prices, and executes consolidation.
  */
 export async function parseExcelOrderHistory(file: File): Promise<{
@@ -444,7 +444,7 @@ export async function parseExcelOrderHistory(file: File): Promise<{
 }
 
 /**
- * Parses Excel files (.xlsx, .xls, .csv) holding reports from Zerodha, Groww, Upstox, AngelOne, etc.
+ * Parses Excel files (.xlsx, .xls, .csv) holding reports from Zerodha, Upstox, AngelOne, etc.
  */
 export async function parseExcelHoldings(file: File): Promise<ParsedHoldingItem[]> {
   const buffer = await file.arrayBuffer();

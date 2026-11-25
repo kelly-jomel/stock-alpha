@@ -103,7 +103,7 @@ export default function PortfolioAnalysisSection({ holdings, analytics, onSelect
 
   return (
     <div className="space-y-6">
-      {/* Groww-style Diagnostic Health Header */}
+      {/* Diagnostic Health Header */}
       <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs">
         <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-100">
           <div className="flex items-center gap-3">
