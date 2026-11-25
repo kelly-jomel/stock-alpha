@@ -48,7 +48,7 @@ export default function Home() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
   const [hasStartedGuestSession, setHasStartedGuestSession] = useState(false);
-  const [isAuthChecking, setIsAuthChecking] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
 
   // Search input in header (Groww style clean search bar)
   const [headerSearchQuery, setHeaderSearchQuery] = useState('');
@@ -62,6 +62,7 @@ export default function Home() {
 
   // Load saved Google Cloud profile from localStorage
   useEffect(() => {
+    setIsMounted(true);
     try {
       const stored = localStorage.getItem('stock_alpha_user');
       if (stored) {
@@ -69,8 +70,6 @@ export default function Home() {
       }
     } catch {
       // ignore
-    } finally {
-      setIsAuthChecking(false);
     }
   }, []);
 
@@ -207,8 +206,8 @@ export default function Home() {
 
   const activeCandles = replayIdx >= 0 ? candles.slice(0, replayIdx + 1) : candles;
 
-  // Render Landing Page if user is not signed in and has not entered demo
-  if (!isAuthChecking && !user && !hasStartedGuestSession) {
+  // Render Landing Page as default gate for unauthenticated users
+  if (!user && !hasStartedGuestSession) {
     return (
       <>
         <LandingPageView
