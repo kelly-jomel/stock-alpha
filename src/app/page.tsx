@@ -10,6 +10,7 @@ import RecommendationsView from '@/components/RecommendationsView';
 import MarketMoversAllView from '@/components/MarketMoversAllView';
 import GoogleSignInModal, { UserProfile } from '@/components/GoogleSignInModal';
 import LiveTickerTape from '@/components/LiveTickerTape';
+import LandingPageView from '@/components/LandingPageView';
 import { StockQuote, Candle, TechnicalIndicators, InvestorScores } from '@/types/stock';
 import { STOCK_UNIVERSE } from '@/lib/stockData';
 import {
@@ -46,6 +47,8 @@ export default function Home() {
   // User Profile & Google Cloud Authentication
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
+  const [hasStartedGuestSession, setHasStartedGuestSession] = useState(false);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
 
   // Search input in header (Groww style clean search bar)
   const [headerSearchQuery, setHeaderSearchQuery] = useState('');
@@ -66,6 +69,8 @@ export default function Home() {
       }
     } catch {
       // ignore
+    } finally {
+      setIsAuthChecking(false);
     }
   }, []);
 
@@ -80,6 +85,7 @@ export default function Home() {
 
   const handleSignOut = () => {
     setUser(null);
+    setHasStartedGuestSession(false);
     try {
       localStorage.removeItem('stock_alpha_user');
     } catch {
@@ -200,6 +206,25 @@ export default function Home() {
   };
 
   const activeCandles = replayIdx >= 0 ? candles.slice(0, replayIdx + 1) : candles;
+
+  // Render Landing Page if user is not signed in and has not entered demo
+  if (!isAuthChecking && !user && !hasStartedGuestSession) {
+    return (
+      <>
+        <LandingPageView
+          onSignInClick={() => setIsSignInModalOpen(true)}
+          onExploreDemo={() => setHasStartedGuestSession(true)}
+        />
+        <GoogleSignInModal
+          isOpen={isSignInModalOpen}
+          onClose={() => setIsSignInModalOpen(false)}
+          user={user}
+          onSignIn={handleSignIn}
+          onSignOut={handleSignOut}
+        />
+      </>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50/60 text-slate-900 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
