@@ -32,7 +32,7 @@ import {
 
 export default function Home() {
   const [selectedSymbol, setSelectedSymbol] = useState<string>('RELIANCE.NS');
-  const [activeTab, setActiveTab] = useState<'explore' | 'recommendations' | 'portfolio' | 'screener' | 'terminal' | 'keystocks-lab'>('explore');
+  const [activeTab, setActiveTab] = useState<'explore' | 'recommendations' | 'portfolio' | 'screener' | 'terminal'>('explore');
   const [loading, setLoading] = useState<boolean>(true);
   const [range, setRange] = useState<string>('1y');
   const [chartInterval, setChartInterval] = useState<string>('1d');
@@ -288,16 +288,6 @@ export default function Home() {
             >
               Terminal
             </button>
-            <button
-              onClick={() => setActiveTab('keystocks-lab')}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-xl transition-all ${
-                activeTab === 'keystocks-lab'
-                  ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold'
-                  : 'hover:text-indigo-600 hover:bg-indigo-50/50'
-              }`}
-            >
-              <BookOpen className="w-3.5 h-3.5 text-indigo-600" /> KeyStocks Lab
-            </button>
           </nav>
         </div>
       </header>
@@ -371,7 +361,7 @@ export default function Home() {
             <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs flex flex-wrap items-center justify-between gap-3 text-xs">
               <div className="flex items-center gap-2">
                 <span className="font-bold text-slate-800 flex items-center gap-1.5">
-                  <Play className="w-3.5 h-3.5 text-indigo-600" /> KeyStocks Bar Replay Simulator:
+                  <Play className="w-3.5 h-3.5 text-indigo-600" /> Bar Replay Simulator:
                 </span>
                 <span className="text-slate-500">
                   {replayIdx >= 0 ? `Step ${replayIdx + 1} of ${candles.length} candles` : 'Live Chart Feed'}
@@ -436,7 +426,7 @@ export default function Home() {
               <InvestorDashboard scores={investorScores} />
             )}
 
-            {/* KeyStocks Moving Average Energy & Formations */}
+            {/* Classical & Harmonic Formations and Moving Average Squeeze */}
             {technicals && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs">
@@ -490,127 +480,6 @@ export default function Home() {
                 </div>
               </div>
             )}
-          </div>
-        )}
-
-        {/* PAGE 6: KeyStocks Technical Analysis Reference & Hedge Fund Blueprint */}
-        {activeTab === 'keystocks-lab' && (
-          <div className="space-y-6">
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs">
-              <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
-                <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100">
-                  <BookOpen className="w-6 h-6" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-slate-900">KeyStocks Methodology &amp; 5-Gate Blueprint</h1>
-                  <p className="text-xs text-slate-500">
-                    The complete operational synthesis uniting KeyStocks technical analysis algorithms with hedge fund quantitative risk models
-                  </p>
-                </div>
-              </div>
-
-              {/* 4 Pillars of KeyStocks */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-2">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs">
-                    01
-                  </div>
-                  <h3 className="font-bold text-slate-900 text-sm">No-Code Query Scanner</h3>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    Unlike TradingView (PineScript) or AmiBroker (AFL), KeyStocks eliminates coding by allowing compound multi-condition technical scans via click &amp; filter.
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-2">
-                  <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs">
-                    02
-                  </div>
-                  <h3 className="font-bold text-slate-900 text-sm">Harmonics &amp; Wolfe Waves</h3>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    Automated Fibonacci 61.8% golden ratios, ABCD measured waves, and 5-point converging falling wedges reaching terminal Point 5 reversal zones.
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-2">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">
-                    03
-                  </div>
-                  <h3 className="font-bold text-slate-900 text-sm">MA Energy Convergence</h3>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    Evaluates the degree of compression between multiple moving averages (20, 50, 200 EMA) to catch coiled explosive volatility breakouts early.
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-2">
-                  <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-xs">
-                    04
-                  </div>
-                  <h3 className="font-bold text-slate-900 text-sm">Bar Replay Backtester</h3>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    Step through historical chart candles bar-by-bar to visually test breakout validity and ensure indicator signals do not repaint.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* 5 Legendary Investors Reference Framework */}
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs space-y-4">
-              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <Award className="w-5 h-5 text-indigo-600" /> The 5-Gate Unified Market Synthesis (Legendary Investors)
-              </h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="p-4 rounded-xl bg-amber-50/50 border border-amber-200/70 space-y-1.5">
-                  <div className="font-bold text-amber-900 text-sm flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-amber-600" /> Warren Buffett (Quality Moats)
-                  </div>
-                  <div className="text-[11px] text-amber-700">Filters: ROIC &ge; 15%, Debt/Equity &lt; 0.5, Low PE</div>
-                  <p className="text-xs text-slate-600 leading-relaxed pt-1">
-                    Prioritizes enduring consumer monopolies with pricing power. Eliminates low-margin commodity businesses.
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-200/70 space-y-1.5">
-                  <div className="font-bold text-emerald-900 text-sm flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-emerald-600" /> Stanley Druckenmiller (Macro &amp; Trend)
-                  </div>
-                  <div className="text-[11px] text-emerald-700">Filters: Price &gt; 50/200 EMA, RSI 50-68 sweetspot</div>
-                  <p className="text-xs text-slate-600 leading-relaxed pt-1">
-                    Never buys a stock in a downtrend regardless of cheap valuation. Sizes positions aggressively when technicals confirm macro liquidity.
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-200/70 space-y-1.5">
-                  <div className="font-bold text-blue-900 text-sm flex items-center gap-2">
-                    <Compass className="w-4 h-4 text-blue-600" /> Ray Dalio (All-Weather Cycles)
-                  </div>
-                  <div className="text-[11px] text-blue-700">Filters: Altman Z &gt; 3.0, Safe deleveraging</div>
-                  <p className="text-xs text-slate-600 leading-relaxed pt-1">
-                    Balances risk across growth/inflation regimes so portfolios survive credit contractions and debt cycles.
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-xl bg-rose-50/50 border border-rose-200/70 space-y-1.5">
-                  <div className="font-bold text-rose-900 text-sm flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 text-rose-600" /> Michael Burry (Forensic Value)
-                  </div>
-                  <div className="text-[11px] text-rose-700">Filters: Low PB, high FCF yield, forensic audit</div>
-                  <p className="text-xs text-slate-600 leading-relaxed pt-1">
-                    Uncovers deep value opportunities where tangible book value and cash generation protect the downside.
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-xl bg-purple-50/50 border border-purple-200/70 space-y-1.5">
-                  <div className="font-bold text-purple-900 text-sm flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-purple-600" /> Cathie Wood (Exponential Growth)
-                  </div>
-                  <div className="text-[11px] text-purple-700">Filters: Multi-sector technology convergence</div>
-                  <p className="text-xs text-slate-600 leading-relaxed pt-1">
-                    Invests in multi-year innovation platforms (EV, AI, renewables, cloud) experiencing Wright’s Law cost deflation.
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
         )}
       </main>
