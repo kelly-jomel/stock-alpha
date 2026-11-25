@@ -82,6 +82,9 @@ export default function ExploreView({ onSelectStock }: Props) {
       }
     }
     loadExploreData();
+    // Auto-update Explore indices, market movers, and volume leaders every 6 seconds
+    const interval = setInterval(loadExploreData, 6000);
+    return () => clearInterval(interval);
   }, []);
 
   const getSectorIcon = (icon: string) => {

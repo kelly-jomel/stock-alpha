@@ -88,13 +88,15 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [headerSearchQuery]);
 
-  // Fetch full data for selected symbol
+  // Fetch full data for selected symbol with automatic background 5-second real-time polling
   useEffect(() => {
     let isCancelled = false;
-    async function loadData() {
-      setLoading(true);
+    async function loadData(silent: boolean = false) {
+      if (!silent) setLoading(true);
       try {
-        const res = await fetch(`/api/stock?symbol=${encodeURIComponent(selectedSymbol)}&range=${range}&interval=${chartInterval}`);
+        const res = await fetch(`/api/stock?symbol=${encodeURIComponent(selectedSymbol)}&range=${range}&interval=${chartInterval}`, {
+          cache: 'no-store'
+        });
         if (res.ok) {
           const data = await res.json();
           if (!isCancelled) {
@@ -102,19 +104,29 @@ export default function Home() {
             setCandles(data.candles);
             setTechnicals(data.technicals);
             setInvestorScores(data.investorScores);
-            setReplayIdx(-1);
-            setIsReplaying(false);
+            if (!silent) {
+              setReplayIdx(-1);
+              setIsReplaying(false);
+            }
           }
         }
       } catch (err) {
         console.error(err);
       } finally {
-        if (!isCancelled) setLoading(false);
+        if (!isCancelled && !silent) setLoading(false);
       }
     }
-    loadData();
+
+    loadData(false);
+
+    // Live continuous ticker refresh every 5 seconds without freezing chart UI
+    const pollInterval = setInterval(() => {
+      loadData(true);
+    }, 5000);
+
     return () => {
       isCancelled = true;
+      clearInterval(pollInterval);
     };
   }, [selectedSymbol, range, chartInterval]);
 

@@ -45,8 +45,8 @@ export default function LiveTickerTape({ onSelectStock }: Props) {
     }
 
     loadTickerData();
-    // Auto-refresh quotes every 15 seconds
-    const interval = setInterval(loadTickerData, 15000);
+    // Real-time automatic price polling every 5 seconds
+    const interval = setInterval(loadTickerData, 5000);
     return () => {
       isCancelled = true;
       clearInterval(interval);

@@ -70,7 +70,7 @@ export async function fetchStockQuote(symbol: string): Promise<StockQuote> {
       const url = `https://${host}/v8/finance/chart/${encodeURIComponent(symbol)}?range=5d&interval=1d`;
       const res = await fetch(url, {
         headers: BROWSER_HEADERS,
-        next: { revalidate: 15 } // 15-second live cache
+        cache: 'no-store'
       });
 
       if (res.ok) {
@@ -157,7 +157,7 @@ export async function fetchStockCandles(
       const url = `https://${host}/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=${interval}`;
       const res = await fetch(url, {
         headers: BROWSER_HEADERS,
-        next: { revalidate: 30 }
+        cache: 'no-store'
       });
 
       if (res.ok) {

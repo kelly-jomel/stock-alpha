@@ -77,6 +77,21 @@ export default function PortfolioView({ onSelectStock }: Props) {
       setLoading(false);
     }
     loadPortfolio();
+
+    // Auto-refresh portfolio current prices and live P&L every 10 seconds
+    const interval = setInterval(() => {
+      const saved = localStorage.getItem('keystock_portfolio');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            refreshHoldingsData(parsed);
+          }
+        } catch {}
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const refreshHoldingsData = async (rawHoldings: Array<{ symbol: string; shares: number; avgBuy: number }>) => {
