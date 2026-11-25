@@ -139,8 +139,40 @@ export default function KeyStockScanner({ onSelectStock }: Props) {
         // Apply technical client-side constraints
         if (priceAboveEMA200) list = list.filter(r => r.quote.price > r.technicals.ema200);
 
+        // Apply KeyStocks Custom Query Rules (if active)
+        if (screenerMode === 'customQuery' && customRules.length > 0) {
+          list = list.filter(r => {
+            return customRules.every(rule => {
+              const getVal = (f: string) => {
+                if (f === 'price') return r.quote.price;
+                if (f === 'rsi') return r.technicals.rsi14;
+                if (f === 'ema20') return r.technicals.ema20;
+                if (f === 'ema50') return r.technicals.ema50;
+                if (f === 'ema200') return r.technicals.ema200;
+                if (f === 'peRatio') return r.quote.peRatio || 0;
+                if (f === 'roic') return r.quote.roic || 0;
+                if (f === 'volume') return r.quote.volume;
+                return 0;
+              };
+
+              const leftVal = getVal(rule.field);
+              const rightVal = rule.compareWith === 'field' && rule.targetField ? getVal(rule.targetField) : rule.targetValue;
+
+              if (rule.operator === '>') return leftVal > rightVal;
+              if (rule.operator === '<') return leftVal < rightVal;
+              if (rule.operator === '>=') return leftVal >= rightVal;
+              if (rule.operator === '<=') return leftVal <= rightVal;
+              return true;
+            });
+          });
+        }
+
         setResults(list);
         setHasScanned(true);
+
+        if (alertEnabled && list.length > 0) {
+          setActiveAlertCount(list.length);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -200,6 +232,29 @@ export default function KeyStockScanner({ onSelectStock }: Props) {
         </div>
       </div>
 
+      {/* Live Alerts Trigger Notification Banner */}
+      {alertEnabled && activeAlertCount > 0 && (
+        <div className="bg-amber-500 text-white rounded-2xl p-4 shadow-md flex items-center justify-between animate-in fade-in slide-in-from-top duration-300">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-amber-600 rounded-xl">
+              <Bell className="w-5 h-5 fill-white" />
+            </div>
+            <div>
+              <div className="font-bold text-sm">KeyStocks Real-Time Alert Triggered!</div>
+              <div className="text-xs text-amber-100">
+                {activeAlertCount} stock{activeAlertCount > 1 ? 's' : ''} matched your active query conditions during this scan.
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => setActiveAlertCount(0)}
+            className="text-xs font-semibold px-3 py-1 bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* 2. Main Screener Engine with Fundamental & Technical Tabs */}
       <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs">
         {/* Header & Mode Switcher */}
@@ -241,7 +296,37 @@ export default function KeyStockScanner({ onSelectStock }: Props) {
               >
                 <TrendingUp className="w-3.5 h-3.5" /> Technical Charts
               </button>
+              <button
+                onClick={() => setScreenerMode('customQuery')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+                  screenerMode === 'customQuery' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Terminal className="w-3.5 h-3.5" /> Custom Query Builder
+              </button>
             </div>
+
+            {/* Live Alert Trigger Toggle */}
+            <button
+              onClick={() => {
+                setAlertEnabled(!alertEnabled);
+                if (!alertEnabled) {
+                  // Request Notification permission if supported
+                  if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+                    Notification.requestPermission();
+                  }
+                }
+              }}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+                alertEnabled
+                  ? 'bg-amber-50 text-amber-700 border-amber-300 shadow-xs'
+                  : 'bg-slate-50 text-slate-500 border-slate-200 hover:text-slate-700'
+              }`}
+              title="Trigger notifications when scan criteria are met"
+            >
+              <Bell className={`w-3.5 h-3.5 ${alertEnabled ? 'fill-amber-500 text-amber-600' : ''}`} />
+              {alertEnabled ? 'Alerts Active' : 'Enable Alerts'}
+            </button>
 
             <button
               onClick={() => runScanner()}
@@ -253,6 +338,131 @@ export default function KeyStockScanner({ onSelectStock }: Props) {
             </button>
           </div>
         </div>
+
+        {/* Custom Query Builder Panel (KeyStocks Feature) */}
+        {screenerMode === 'customQuery' && (
+          <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-5 mb-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-indigo-950 flex items-center gap-2">
+                  <Terminal className="w-4 h-4 text-indigo-600" /> KeyStocks Visual Query &amp; Condition Builder
+                </h3>
+                <p className="text-xs text-indigo-700/80">
+                  Combine any price action, momentum, or valuation rules without coding (e.g. Close &gt; EMA 50 AND RSI &gt; 55)
+                </p>
+              </div>
+              <button
+                onClick={() =>
+                  setCustomRules(prev => [
+                    ...prev,
+                    {
+                      id: String(Date.now()),
+                      field: 'rsi',
+                      operator: '>',
+                      compareWith: 'value',
+                      targetValue: 50
+                    }
+                  ])
+                }
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition-colors shadow-xs"
+              >
+                <Plus className="w-3.5 h-3.5" /> Add Condition
+              </button>
+            </div>
+
+            <div className="space-y-2.5">
+              {customRules.map((rule, idx) => (
+                <div key={rule.id} className="flex flex-wrap items-center gap-2.5 bg-white border border-indigo-100 rounded-xl p-3 shadow-xs">
+                  <span className="text-[11px] font-bold text-indigo-600 px-2 py-0.5 rounded bg-indigo-50">
+                    {idx === 0 ? 'IF' : 'AND'}
+                  </span>
+
+                  {/* Left Field */}
+                  <select
+                    value={rule.field}
+                    onChange={(e) => {
+                      const v = e.target.value as any;
+                      setCustomRules(rules => rules.map(r => r.id === rule.id ? { ...r, field: v } : r));
+                    }}
+                    className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-semibold outline-none"
+                  >
+                    <option value="price">Current Price (LTP)</option>
+                    <option value="rsi">RSI 14</option>
+                    <option value="ema20">EMA 20</option>
+                    <option value="ema50">EMA 50</option>
+                    <option value="ema200">EMA 200</option>
+                    <option value="peRatio">P/E Ratio</option>
+                    <option value="roic">ROIC %</option>
+                    <option value="volume">Day Volume</option>
+                  </select>
+
+                  {/* Operator */}
+                  <select
+                    value={rule.operator}
+                    onChange={(e) => {
+                      const v = e.target.value as any;
+                      setCustomRules(rules => rules.map(r => r.id === rule.id ? { ...r, operator: v } : r));
+                    }}
+                    className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-semibold outline-none"
+                  >
+                    <option value=">">&gt; Greater Than</option>
+                    <option value="<">&lt; Less Than</option>
+                    <option value=">=">&gt;= Greater or Equal</option>
+                    <option value="<=">&lt;= Less or Equal</option>
+                  </select>
+
+                  {/* Compare mode */}
+                  <select
+                    value={rule.compareWith}
+                    onChange={(e) => {
+                      const v = e.target.value as any;
+                      setCustomRules(rules => rules.map(r => r.id === rule.id ? { ...r, compareWith: v } : r));
+                    }}
+                    className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-semibold outline-none"
+                  >
+                    <option value="value">Fixed Value</option>
+                    <option value="field">Another Indicator</option>
+                  </select>
+
+                  {/* Right Target */}
+                  {rule.compareWith === 'value' ? (
+                    <input
+                      type="number"
+                      value={rule.targetValue}
+                      onChange={(e) => {
+                        const v = Number(e.target.value);
+                        setCustomRules(rules => rules.map(r => r.id === rule.id ? { ...r, targetValue: v } : r));
+                      }}
+                      className="w-24 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-mono font-semibold outline-none"
+                    />
+                  ) : (
+                    <select
+                      value={rule.targetField || 'ema50'}
+                      onChange={(e) => {
+                        const v = e.target.value as any;
+                        setCustomRules(rules => rules.map(r => r.id === rule.id ? { ...r, targetField: v } : r));
+                      }}
+                      className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-semibold outline-none"
+                    >
+                      <option value="price">Price</option>
+                      <option value="ema20">EMA 20</option>
+                      <option value="ema50">EMA 50</option>
+                      <option value="ema200">EMA 200</option>
+                    </select>
+                  )}
+
+                  <button
+                    onClick={() => setCustomRules(rules => rules.filter(r => r.id !== rule.id))}
+                    className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg transition-colors ml-auto"
+                    title="Remove Rule"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Dynamic Filters Form */}
         <div className="space-y-5">

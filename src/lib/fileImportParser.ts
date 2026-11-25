@@ -6,10 +6,25 @@ export interface ParsedHoldingItem {
   shares: number;
   avgBuy: number;
   rawName?: string;
+  tradeCount?: number;
+  totalBought?: number;
+  totalSold?: number;
+  realizedPnL?: number;
+}
+
+export interface ParsedTradeOrder {
+  symbol: string;
+  rawSymbol: string;
+  type: 'BUY' | 'SELL';
+  quantity: number;
+  price: number;
+  date?: string;
+  orderId?: string;
+  exchange?: string;
 }
 
 /**
- * Normalizes user/broker symbol input to match our NSE or US universe.
+ * Normalizes user/broker symbol input to match our NSE or Indian universe.
  * Handles broker naming variants like 'TCS', 'TCS-EQ', 'TATAMOTORS', 'HDFCBANK-EQ', etc.
  */
 export function normalizeSymbol(raw: string): string {
@@ -30,6 +45,201 @@ export function normalizeSymbol(raw: string): string {
 
   // Default to NSE symbol
   return `${clean}.NS`;
+}
+
+/**
+ * Consolidates a list of Buy and Sell orders using standard Weighted Average Cost / FIFO.
+ * Computes net remaining shares and the weighted average purchase price of active positions.
+ */
+export function consolidateOrders(orders: ParsedTradeOrder[]): ParsedHoldingItem[] {
+  // Group orders by normalized symbol
+  const grouped: Record<string, ParsedTradeOrder[]> = {};
+
+  orders.forEach(order => {
+    if (!grouped[order.symbol]) {
+      grouped[order.symbol] = [];
+    }
+    grouped[order.symbol].push(order);
+  });
+
+  const results: ParsedHoldingItem[] = [];
+
+  for (const [symbol, tradeList] of Object.entries(grouped)) {
+    let currentShares = 0;
+    let totalCost = 0;
+    let totalBought = 0;
+    let totalSold = 0;
+    let realizedPnL = 0;
+
+    for (const trade of tradeList) {
+      if (trade.type === 'BUY') {
+        const tradeCost = trade.quantity * trade.price;
+        totalCost += tradeCost;
+        currentShares += trade.quantity;
+        totalBought += trade.quantity;
+      } else if (trade.type === 'SELL') {
+        totalSold += trade.quantity;
+        if (currentShares > 0) {
+          const avgPriceBeforeSell = totalCost / currentShares;
+          const soldQty = Math.min(trade.quantity, currentShares);
+          realizedPnL += soldQty * (trade.price - avgPriceBeforeSell);
+
+          currentShares -= soldQty;
+          totalCost = currentShares * avgPriceBeforeSell;
+        }
+      }
+    }
+
+    if (currentShares > 0) {
+      const avgBuy = totalCost / currentShares;
+      results.push({
+        symbol,
+        shares: currentShares,
+        avgBuy: Number(avgBuy.toFixed(2)),
+        rawName: tradeList[0]?.rawSymbol || symbol,
+        tradeCount: tradeList.length,
+        totalBought,
+        totalSold,
+        realizedPnL: Number(realizedPnL.toFixed(2))
+      });
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Parses an Excel or CSV Order History statement (Zerodha tradebook/orderbook, Groww orders, Upstox, AngelOne).
+ * Recognizes Buy/Sell transaction types, quantities, execution prices, and executes consolidation.
+ */
+export async function parseExcelOrderHistory(file: File): Promise<{
+  consolidatedHoldings: ParsedHoldingItem[];
+  rawOrders: ParsedTradeOrder[];
+}> {
+  const buffer = await file.arrayBuffer();
+  const workbook = XLSX.read(buffer, { type: 'array' });
+  const sheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[sheetName];
+  const jsonData = XLSX.utils.sheet_to_json<unknown[]>(worksheet, { header: 1 });
+
+  if (!jsonData || jsonData.length === 0) {
+    return { consolidatedHoldings: [], rawOrders: [] };
+  }
+
+  let headerRowIndex = -1;
+  let symbolCol = -1;
+  let typeCol = -1;
+  let qtyCol = -1;
+  let priceCol = -1;
+  let dateCol = -1;
+  let orderIdCol = -1;
+
+  for (let r = 0; r < Math.min(jsonData.length, 20); r++) {
+    const row = jsonData[r] as unknown[];
+    if (!Array.isArray(row)) continue;
+
+    for (let c = 0; c < row.length; c++) {
+      const cell = String(row[c] || '').toLowerCase().trim();
+
+      if (
+        cell.includes('symbol') ||
+        cell.includes('instrument') ||
+        cell.includes('scrip') ||
+        cell.includes('stock') ||
+        cell.includes('security')
+      ) {
+        if (symbolCol === -1) symbolCol = c;
+      } else if (
+        cell.includes('type') ||
+        cell.includes('side') ||
+        cell.includes('action') ||
+        cell.includes('buy/sell') ||
+        cell.includes('trade_type')
+      ) {
+        if (typeCol === -1) typeCol = c;
+      } else if (
+        cell.includes('qty') ||
+        cell.includes('quantity') ||
+        cell.includes('filled') ||
+        cell.includes('shares') ||
+        cell.includes('traded qty')
+      ) {
+        if (qtyCol === -1) qtyCol = c;
+      } else if (
+        cell.includes('price') ||
+        cell.includes('trade price') ||
+        cell.includes('avg price') ||
+        cell.includes('execution price') ||
+        cell.includes('rate')
+      ) {
+        if (priceCol === -1) priceCol = c;
+      } else if (
+        cell.includes('date') ||
+        cell.includes('trade date') ||
+        cell.includes('time') ||
+        cell.includes('order date')
+      ) {
+        if (dateCol === -1) dateCol = c;
+      } else if (
+        cell.includes('order id') ||
+        cell.includes('trade id') ||
+        cell.includes('order no')
+      ) {
+        if (orderIdCol === -1) orderIdCol = c;
+      }
+    }
+
+    if (symbolCol !== -1 && (qtyCol !== -1 || priceCol !== -1)) {
+      headerRowIndex = r;
+      break;
+    }
+  }
+
+  // Fallback defaults if header search was ambiguous
+  if (headerRowIndex === -1) {
+    headerRowIndex = 0;
+    symbolCol = 0;
+    typeCol = 1;
+    qtyCol = 2;
+    priceCol = 3;
+  }
+
+  const rawOrders: ParsedTradeOrder[] = [];
+
+  for (let r = headerRowIndex + 1; r < jsonData.length; r++) {
+    const row = jsonData[r] as unknown[];
+    if (!Array.isArray(row) || !row[symbolCol]) continue;
+
+    const rawSym = String(row[symbolCol] || '').trim();
+    if (!rawSym || rawSym.toLowerCase().includes('total') || rawSym.toLowerCase().includes('subtotal')) {
+      continue;
+    }
+
+    const typeCell = typeCol !== -1 ? String(row[typeCol] || '').toUpperCase().trim() : 'BUY';
+    const isSell = typeCell.includes('SELL') || typeCell === 'S' || typeCell.includes('SHORT');
+    const orderType: 'BUY' | 'SELL' = isSell ? 'SELL' : 'BUY';
+
+    const rawQty = parseFloat(String(row[qtyCol] || '0').replace(/[^0-9.-]/g, ''));
+    let rawPrice = priceCol !== -1 ? parseFloat(String(row[priceCol] || '0').replace(/[^0-9.-]/g, '')) : 0;
+
+    if (isNaN(rawQty) || rawQty <= 0) continue;
+    if (isNaN(rawPrice) || rawPrice <= 0) rawPrice = 500;
+
+    const normalized = normalizeSymbol(rawSym);
+
+    rawOrders.push({
+      symbol: normalized,
+      rawSymbol: rawSym,
+      type: orderType,
+      quantity: Math.round(rawQty),
+      price: Number(rawPrice.toFixed(2)),
+      date: dateCol !== -1 ? String(row[dateCol] || '') : undefined,
+      orderId: orderIdCol !== -1 ? String(row[orderIdCol] || '') : undefined
+    });
+  }
+
+  const consolidatedHoldings = consolidateOrders(rawOrders);
+  return { consolidatedHoldings, rawOrders };
 }
 
 /**
@@ -117,7 +327,6 @@ export async function parseExcelHoldings(file: File): Promise<ParsedHoldingItem[
     if (isNaN(rawQty) || rawQty <= 0) continue;
 
     const normalized = normalizeSymbol(rawSym);
-    const universeMatch = STOCK_UNIVERSE.find(s => s.symbol === normalized);
 
     if (isNaN(rawPrice) || rawPrice <= 0) {
       rawPrice = 500;

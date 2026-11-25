@@ -4,7 +4,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { PortfolioHolding } from '@/types/portfolio';
 import { calculatePortfolioAnalytics } from '@/lib/portfolioAnalytics';
 import { STOCK_UNIVERSE } from '@/lib/stockData';
-import { parseExcelHoldings, parsePdfHoldings, ParsedHoldingItem } from '@/lib/fileImportParser';
+import {
+  parseExcelHoldings,
+  parsePdfHoldings,
+  parseExcelOrderHistory,
+  ParsedHoldingItem,
+  ParsedTradeOrder
+} from '@/lib/fileImportParser';
 import {
   Wallet,
   Plus,
@@ -17,20 +23,24 @@ import {
   Award,
   FileSpreadsheet,
   Upload,
-  Download
+  Download,
+  History,
+  Layers,
+  ArrowDownUp
 } from 'lucide-react';
 
 interface Props {
   onSelectStock: (symbol: string) => void;
 }
 
-const DEFAULT_HOLDINGS: Array<{ symbol: string; shares: number; avgBuy: number }> = [];
-
 export default function PortfolioView({ onSelectStock }: Props) {
   const [holdings, setHoldings] = useState<PortfolioHolding[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+
+  // Import mode: 'HOLDINGS' (existing quantity & avg cost) or 'ORDER_HISTORY' (Buy/Sell trades consolidated)
+  const [importMode, setImportMode] = useState<'HOLDINGS' | 'ORDER_HISTORY'>('ORDER_HISTORY');
 
   // New holding form state
   const [newSymbol, setNewSymbol] = useState(STOCK_UNIVERSE[0].symbol);
@@ -42,6 +52,7 @@ export default function PortfolioView({ onSelectStock }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importLoading, setImportLoading] = useState(false);
   const [importPreview, setImportPreview] = useState<ParsedHoldingItem[]>([]);
+  const [orderPreview, setOrderPreview] = useState<ParsedTradeOrder[]>([]);
   const [importError, setImportError] = useState<string | null>(null);
 
   // Load holdings from localStorage (defaults to empty)
@@ -154,9 +165,14 @@ export default function PortfolioView({ onSelectStock }: Props) {
     let updatedRaw: Array<{ symbol: string; shares: number; avgBuy: number }> = [];
 
     if (existingIndex >= 0) {
+      const existing = holdings[existingIndex];
+      // Weighted average calculation when adding to an existing position
+      const totalShares = existing.shares + sharesNum;
+      const weightedAvgBuy = ((existing.shares * existing.averageBuyPrice) + (sharesNum * avgBuyNum)) / totalShares;
+
       updatedRaw = holdings.map(h =>
         h.symbol === newSymbol
-          ? { symbol: h.symbol, shares: h.shares + sharesNum, avgBuy: avgBuyNum }
+          ? { symbol: h.symbol, shares: totalShares, avgBuy: Number(weightedAvgBuy.toFixed(2)) }
           : { symbol: h.symbol, shares: h.shares, avgBuy: h.averageBuyPrice }
       );
     } else {
@@ -185,21 +201,34 @@ export default function PortfolioView({ onSelectStock }: Props) {
     setImportLoading(true);
     setImportError(null);
     setImportPreview([]);
+    setOrderPreview([]);
 
     try {
       const fileName = file.name.toLowerCase();
       let parsed: ParsedHoldingItem[] = [];
 
-      if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls') || fileName.endsWith('.csv')) {
-        parsed = await parseExcelHoldings(file);
-      } else if (fileName.endsWith('.pdf')) {
-        parsed = await parsePdfHoldings(file);
+      if (importMode === 'ORDER_HISTORY') {
+        if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls') && !fileName.endsWith('.csv')) {
+          throw new Error('Order history statement must be an Excel (.xlsx, .xls) or CSV file.');
+        }
+        const { consolidatedHoldings, rawOrders } = await parseExcelOrderHistory(file);
+        if (consolidatedHoldings.length === 0 && rawOrders.length === 0) {
+          throw new Error('No valid trade orders detected in the order history file. Please verify column headers (Symbol, Type/Side, Quantity, Price).');
+        }
+        setOrderPreview(rawOrders);
+        parsed = consolidatedHoldings;
       } else {
-        throw new Error('Unsupported format. Please upload .xlsx, .xls, .csv, or .pdf files.');
+        if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls') || fileName.endsWith('.csv')) {
+          parsed = await parseExcelHoldings(file);
+        } else if (fileName.endsWith('.pdf')) {
+          parsed = await parsePdfHoldings(file);
+        } else {
+          throw new Error('Unsupported format. Please upload .xlsx, .xls, .csv, or .pdf files.');
+        }
       }
 
       if (parsed.length === 0) {
-        throw new Error('No valid stock holdings detected in file.');
+        throw new Error('No active or open holdings detected from the parsed records.');
       }
 
       setImportPreview(parsed);
@@ -221,8 +250,11 @@ export default function PortfolioView({ onSelectStock }: Props) {
     importPreview.forEach(item => {
       const idx = merged.findIndex(m => m.symbol === item.symbol);
       if (idx >= 0) {
-        merged[idx].shares += item.shares;
-        merged[idx].avgBuy = item.avgBuy;
+        // Weighted average cost consolidation with existing holdings
+        const totalShares = merged[idx].shares + item.shares;
+        const totalCost = (merged[idx].shares * merged[idx].avgBuy) + (item.shares * item.avgBuy);
+        merged[idx].shares = totalShares;
+        merged[idx].avgBuy = Number((totalCost / totalShares).toFixed(2));
       } else {
         merged.push({ symbol: item.symbol, shares: item.shares, avgBuy: item.avgBuy });
       }
@@ -232,14 +264,35 @@ export default function PortfolioView({ onSelectStock }: Props) {
     setImportLoading(false);
     setShowImportModal(false);
     setImportPreview([]);
+    setOrderPreview([]);
   };
 
-  const downloadSampleExcel = () => {
+  const downloadSampleHoldingsExcel = () => {
     const csvContent = 'data:text/csv;charset=utf-8,Symbol,Quantity,Buy Price\nRELIANCE,50,1320\nTCS,25,2450\nINFY,40,1120\nITC,150,465\nHDFCBANK,80,820\n';
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', 'sample_portfolio_holdings.csv');
+    link.setAttribute('download', 'sample_holdings.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const downloadSampleOrderHistoryExcel = () => {
+    const csvContent =
+      'data:text/csv;charset=utf-8,Trade Date,Symbol,Type,Quantity,Price,Order ID\n' +
+      '2026-01-10,RELIANCE,BUY,30,1280.50,ORD1001\n' +
+      '2026-01-15,RELIANCE,BUY,20,1310.00,ORD1002\n' +
+      '2026-02-01,RELIANCE,SELL,10,1400.00,ORD1003\n' +
+      '2026-01-12,TCS,BUY,40,2400.00,ORD1004\n' +
+      '2026-02-05,TCS,BUY,10,2500.00,ORD1005\n' +
+      '2026-01-20,HDFCBANK,BUY,100,800.00,ORD1006\n' +
+      '2026-02-10,HDFCBANK,SELL,20,850.00,ORD1007\n' +
+      '2026-02-14,INFY,BUY,50,1125.00,ORD1008\n';
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', 'sample_order_history.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -272,10 +325,22 @@ export default function PortfolioView({ onSelectStock }: Props) {
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
             <button
-              onClick={() => setShowImportModal(true)}
+              onClick={() => {
+                setImportMode('ORDER_HISTORY');
+                setShowImportModal(true);
+              }}
+              className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-semibold text-xs transition-all"
+            >
+              <History className="w-4 h-4" /> Import Order History
+            </button>
+            <button
+              onClick={() => {
+                setImportMode('HOLDINGS');
+                setShowImportModal(true);
+              }}
               className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-semibold text-xs transition-all"
             >
-              <FileSpreadsheet className="w-4 h-4" /> Import Excel / PDF
+              <FileSpreadsheet className="w-4 h-4" /> Import Holdings
             </button>
             <button
               onClick={() => setShowAddModal(true)}
@@ -439,111 +504,103 @@ export default function PortfolioView({ onSelectStock }: Props) {
             <div>
               <h3 className="font-bold text-slate-800 text-base">Your portfolio is currently empty</h3>
               <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
-                Upload your broker statement (Excel/PDF) or manually add your Indian stock holdings to calculate your live returns, 5-gate investor quality score, and risk parity diagnostics.
+                Upload your broker order history or holding statement (Excel/PDF) to consolidate and calculate your live valuation, 5-gate investor quality score, and risk parity diagnostics.
               </p>
             </div>
-            <div className="flex items-center justify-center gap-3 pt-2">
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
               <button
-                onClick={() => setShowImportModal(true)}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-semibold text-xs transition-all"
+                onClick={() => {
+                  setImportMode('ORDER_HISTORY');
+                  setShowImportModal(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-semibold text-xs transition-all"
               >
-                <FileSpreadsheet className="w-4 h-4" /> Import Excel / PDF Statement
+                <History className="w-4 h-4" /> Import &amp; Consolidate Order History
               </button>
               <button
-                onClick={() => setShowAddModal(true)}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs transition-all"
+                onClick={() => {
+                  setImportMode('HOLDINGS');
+                  setShowImportModal(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-semibold text-xs transition-all"
               >
-                <Plus className="w-4 h-4" /> Add Manually
+                <FileSpreadsheet className="w-4 h-4" /> Import Holdings Statement
               </button>
             </div>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50/80 text-slate-500 uppercase font-semibold tracking-wider border-b border-slate-100">
-                <tr>
-                  <th className="px-4 py-3">Security</th>
-                  <th className="px-4 py-3">Weight</th>
-                  <th className="px-4 py-3">Qty &amp; Avg Cost</th>
-                  <th className="px-4 py-3">Current LTP</th>
-                  <th className="px-4 py-3">Current Value</th>
-                  <th className="px-4 py-3">Unrealized P&amp;L</th>
-                  <th className="px-4 py-3">5-Gate Score</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/50 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+                  <th className="py-3 px-4">Instrument</th>
+                  <th className="py-3 px-4 text-right">Shares</th>
+                  <th className="py-3 px-4 text-right">Avg Cost</th>
+                  <th className="py-3 px-4 text-right">LTP (₹)</th>
+                  <th className="py-3 px-4 text-right">Current Value</th>
+                  <th className="py-3 px-4 text-right">P&amp;L</th>
+                  <th className="py-3 px-4 text-right">Weight</th>
+                  <th className="py-3 px-4 text-center">Quality</th>
+                  <th className="py-3 px-4 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
-                {holdings.map((h) => {
-                  const isPositive = h.unrealizedPnL >= 0;
+                {holdings.map((holding) => {
+                  const isProfit = holding.unrealizedPnL >= 0;
                   return (
-                    <tr key={h.symbol} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-bold text-slate-900 text-sm">{h.name}</span>
-                          <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
-                            {h.symbol.replace('.NS', '')}
-                          </span>
+                    <tr
+                      key={holding.id}
+                      className="hover:bg-slate-50/70 transition-colors cursor-pointer group"
+                      onClick={() => onSelectStock(holding.symbol)}
+                    >
+                      <td className="py-3.5 px-4 font-medium">
+                        <div className="font-bold text-slate-900 group-hover:text-emerald-600 transition-colors">
+                          {holding.symbol.replace('.NS', '')}
                         </div>
-                        <div className="text-[11px] text-slate-400 mt-0.5">{h.sector} &bull; NSE</div>
+                        <div className="text-[11px] text-slate-400 truncate max-w-[150px]">{holding.name}</div>
                       </td>
-                      <td className="px-4 py-3.5">
-                        <div className="font-mono font-bold text-slate-900">{h.weightPercent}%</div>
-                        <div className="w-12 bg-slate-100 h-1 rounded-full overflow-hidden mt-1">
-                          <div className="bg-emerald-500 h-full" style={{ width: `${h.weightPercent}%` }} />
+
+                      <td className="py-3.5 px-4 text-right font-mono font-semibold text-slate-900">
+                        {holding.shares}
+                      </td>
+
+                      <td className="py-3.5 px-4 text-right font-mono text-slate-600">
+                        ₹{holding.averageBuyPrice.toLocaleString('en-IN')}
+                      </td>
+
+                      <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-900">
+                        ₹{holding.currentPrice.toLocaleString('en-IN')}
+                      </td>
+
+                      <td className="py-3.5 px-4 text-right font-mono font-semibold text-slate-900">
+                        ₹{holding.currentValue.toLocaleString('en-IN')}
+                      </td>
+
+                      <td className={`py-3.5 px-4 text-right font-mono font-bold ${isProfit ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        <div>{isProfit ? '+' : ''}₹{holding.unrealizedPnL.toLocaleString('en-IN')}</div>
+                        <div className="text-[10px] font-normal">
+                          {isProfit ? '+' : ''}{holding.unrealizedPnLPercent}%
                         </div>
                       </td>
-                      <td className="px-4 py-3.5 font-mono">
-                        <div className="font-semibold text-slate-800">{h.shares} shares</div>
-                        <div className="text-slate-400 text-[11px]">@ ₹{h.averageBuyPrice}</div>
+
+                      <td className="py-3.5 px-4 text-right font-mono text-slate-500">
+                        {holding.weightPercent}%
                       </td>
-                      <td className="px-4 py-3.5 font-mono font-bold text-slate-900">
-                        ₹{h.currentPrice.toLocaleString('en-IN')}
+
+                      <td className="py-3.5 px-4 text-center">
+                        <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-mono font-bold text-[11px] border border-indigo-100">
+                          {holding.investorScores?.compositeScore ?? '--'}
+                        </span>
                       </td>
-                      <td className="px-4 py-3.5 font-mono font-bold text-slate-900">
-                        ₹{h.currentValue.toLocaleString('en-IN')}
-                      </td>
-                      <td className="px-4 py-3.5 font-mono">
-                        <div className={`font-bold ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
-                          {isPositive ? '+' : ''}₹{h.unrealizedPnL.toLocaleString('en-IN')}
-                        </div>
-                        <div className={`text-[11px] ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
-                          {isPositive ? '+' : ''}{h.unrealizedPnLPercent}%
-                        </div>
-                      </td>
-                      <td className="px-4 py-3.5 font-mono">
-                        {h.investorScores ? (
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-slate-900">{h.investorScores.compositeScore}</span>
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
-                              h.investorScores.unifiedDecision === 'STRONG BUY'
-                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                                : h.investorScores.unifiedDecision === 'ACCUMULATE'
-                                ? 'bg-blue-50 text-blue-800 border-blue-200'
-                                : 'bg-amber-50 text-amber-800 border-amber-200'
-                            }`}>
-                              {h.investorScores.unifiedDecision}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-slate-400">-</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => onSelectStock(h.symbol)}
-                            className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors"
-                          >
-                            Analyze
-                          </button>
-                          <button
-                            onClick={() => handleRemoveHolding(h.symbol)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                            title="Remove from portfolio"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+
+                      <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => handleRemoveHolding(holding.symbol)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                          title="Remove holding"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </td>
                     </tr>
                   );
@@ -557,16 +614,25 @@ export default function PortfolioView({ onSelectStock }: Props) {
       {/* Import Modal */}
       {showImportModal && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-5">
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 max-w-xl w-full shadow-2xl space-y-5">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5 text-slate-900 font-bold text-base">
-                <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
-                Import Indian Holdings (Excel / PDF)
+                {importMode === 'ORDER_HISTORY' ? (
+                  <History className="w-5 h-5 text-indigo-600" />
+                ) : (
+                  <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
+                )}
+                <span>
+                  {importMode === 'ORDER_HISTORY'
+                    ? 'Import & Consolidate Order History'
+                    : 'Import Holdings Statement'}
+                </span>
               </div>
               <button
                 onClick={() => {
                   setShowImportModal(false);
                   setImportPreview([]);
+                  setOrderPreview([]);
                   setImportError(null);
                 }}
                 className="text-slate-400 hover:text-slate-700 text-xs font-semibold"
@@ -575,39 +641,90 @@ export default function PortfolioView({ onSelectStock }: Props) {
               </button>
             </div>
 
+            {/* Mode Switcher Tabs */}
+            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl text-xs font-bold">
+              <button
+                onClick={() => {
+                  setImportMode('ORDER_HISTORY');
+                  setImportPreview([]);
+                  setOrderPreview([]);
+                  setImportError(null);
+                }}
+                className={`flex items-center justify-center gap-1.5 py-2 rounded-lg transition-all ${
+                  importMode === 'ORDER_HISTORY'
+                    ? 'bg-white text-indigo-700 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <ArrowDownUp className="w-3.5 h-3.5" />
+                Order History (Buy/Sell Consolidation)
+              </button>
+              <button
+                onClick={() => {
+                  setImportMode('HOLDINGS');
+                  setImportPreview([]);
+                  setOrderPreview([]);
+                  setImportError(null);
+                }}
+                className={`flex items-center justify-center gap-1.5 py-2 rounded-lg transition-all ${
+                  importMode === 'HOLDINGS'
+                    ? 'bg-white text-emerald-700 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                Holdings Statement (Quantity + Cost)
+              </button>
+            </div>
+
             <p className="text-xs text-slate-600 leading-relaxed">
-              Upload your holding statement from Zerodha, Groww, Upstox, AngelOne, or ICICI Direct. Supports <strong>.xlsx, .xls, .csv, and .pdf</strong>.
+              {importMode === 'ORDER_HISTORY' ? (
+                <>
+                  Upload your completed orders report from <strong>Zerodha (tradebook/orders)</strong>, <strong>Groww</strong>, <strong>Upstox</strong>, or <strong>AngelOne</strong> (.xlsx, .xls, .csv).
+                  The app automatically net-balances Buy/Sell orders and calculates true weighted-average purchase prices.
+                </>
+              ) : (
+                <>
+                  Upload your existing portfolio holdings statement from your broker (.xlsx, .xls, .csv, or .pdf).
+                </>
+              )}
             </p>
 
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-slate-200 hover:border-emerald-500 rounded-xl p-6 text-center cursor-pointer transition-all bg-slate-50 hover:bg-emerald-50/30"
+              className="border-2 border-dashed border-slate-200 hover:border-indigo-500 rounded-xl p-6 text-center cursor-pointer transition-all bg-slate-50 hover:bg-indigo-50/20"
             >
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".xlsx,.xls,.csv,.pdf"
+                accept={importMode === 'ORDER_HISTORY' ? '.xlsx,.xls,.csv' : '.xlsx,.xls,.csv,.pdf'}
                 className="hidden"
                 onChange={handleFileUpload}
               />
-              <Upload className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
-              <div className="text-sm font-bold text-slate-800">Click or drag statement file to upload</div>
-              <div className="text-xs text-slate-400 mt-1">Excel (.xlsx, .xls, .csv) or Broker Statement (.pdf)</div>
+              <Upload className={`w-8 h-8 mx-auto mb-2 ${importMode === 'ORDER_HISTORY' ? 'text-indigo-600' : 'text-emerald-600'}`} />
+              <div className="text-sm font-bold text-slate-800">
+                {importMode === 'ORDER_HISTORY' ? 'Click or drag Order History Excel / CSV' : 'Click or drag Holdings file to upload'}
+              </div>
+              <div className="text-xs text-slate-400 mt-1">
+                {importMode === 'ORDER_HISTORY' ? 'Excel (.xlsx, .xls) or CSV orderbook' : 'Excel (.xlsx, .xls, .csv) or Broker PDF'}
+              </div>
             </div>
 
             <div className="flex items-center justify-between text-xs text-slate-500 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
               <span>Need a sample template?</span>
               <button
-                onClick={downloadSampleExcel}
-                className="text-emerald-600 hover:text-emerald-700 font-bold flex items-center gap-1"
+                onClick={importMode === 'ORDER_HISTORY' ? downloadSampleOrderHistoryExcel : downloadSampleHoldingsExcel}
+                className="text-indigo-600 hover:text-indigo-700 font-bold flex items-center gap-1"
               >
-                <Download className="w-3.5 h-3.5" /> Download CSV
+                <Download className="w-3.5 h-3.5" /> Download {importMode === 'ORDER_HISTORY' ? 'Order History' : 'Holdings'} CSV
               </button>
             </div>
 
             {importLoading && (
-              <div className="p-3 text-center text-xs text-emerald-600 animate-pulse font-medium">
-                Parsing holding rows and matching Indian securities...
+              <div className="p-3 text-center text-xs text-indigo-600 animate-pulse font-medium">
+                {importMode === 'ORDER_HISTORY'
+                  ? 'Analyzing trades, netting buy/sell transactions & calculating weighted cost...'
+                  : 'Parsing holding rows and matching Indian securities...'}
               </div>
             )}
 
@@ -619,18 +736,38 @@ export default function PortfolioView({ onSelectStock }: Props) {
 
             {importPreview.length > 0 && (
               <div className="space-y-3">
-                <div className="text-xs font-bold text-emerald-700 flex items-center gap-1.5">
-                  <CheckCircle className="w-4 h-4 text-emerald-600" /> Detected {importPreview.length} securities:
+                <div className="flex items-center justify-between text-xs font-bold text-slate-800">
+                  <span className="flex items-center gap-1.5 text-emerald-700">
+                    <CheckCircle className="w-4 h-4 text-emerald-600" />
+                    Consolidated {importPreview.length} Active Positions:
+                  </span>
+                  {orderPreview.length > 0 && (
+                    <span className="text-[11px] text-slate-500 font-normal">
+                      From {orderPreview.length} executed trades
+                    </span>
+                  )}
                 </div>
-                <div className="max-h-44 overflow-y-auto rounded-lg border border-slate-200 divide-y divide-slate-100 text-xs font-mono">
+
+                <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-200 divide-y divide-slate-100 text-xs font-mono">
                   {importPreview.map((item, idx) => (
                     <div key={idx} className="p-2.5 bg-slate-50 flex items-center justify-between text-slate-700">
                       <div>
-                        <span className="font-bold text-slate-900">{item.symbol}</span>
-                        {item.rawName && <span className="text-[10px] text-slate-400 ml-2">({item.rawName})</span>}
+                        <span className="font-bold text-slate-900">{item.symbol.replace('.NS', '')}</span>
+                        {item.tradeCount && (
+                          <span className="text-[10px] text-indigo-600 font-sans ml-2 px-1.5 py-0.5 rounded bg-indigo-50 border border-indigo-100">
+                            {item.tradeCount} trades
+                          </span>
+                        )}
                       </div>
-                      <div>
-                        {item.shares} shares @ ₹{item.avgBuy}
+                      <div className="text-right">
+                        <div>
+                          <span className="font-bold text-slate-900">{item.shares}</span> shares @ ₹{item.avgBuy}
+                        </div>
+                        {item.realizedPnL !== undefined && item.realizedPnL !== 0 && (
+                          <div className={`text-[10px] ${item.realizedPnL >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                            Realized P&amp;L: {item.realizedPnL >= 0 ? '+' : ''}₹{item.realizedPnL}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -644,6 +781,7 @@ export default function PortfolioView({ onSelectStock }: Props) {
                 onClick={() => {
                   setShowImportModal(false);
                   setImportPreview([]);
+                  setOrderPreview([]);
                 }}
                 className="px-4 py-2 rounded-xl text-slate-500 hover:text-slate-800 text-xs font-semibold"
               >
@@ -655,7 +793,7 @@ export default function PortfolioView({ onSelectStock }: Props) {
                 disabled={importPreview.length === 0 || importLoading}
                 className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-all disabled:opacity-40"
               >
-                Add {importPreview.length} Holdings to Portfolio
+                Consolidate &amp; Add {importPreview.length} Holdings
               </button>
             </div>
           </div>
