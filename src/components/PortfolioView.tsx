@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { PortfolioHolding } from '@/types/portfolio';
 import { calculatePortfolioAnalytics } from '@/lib/portfolioAnalytics';
 import { STOCK_UNIVERSE } from '@/lib/stockData';
+import SectorPieChart from '@/components/SectorPieChart';
+import PortfolioAnalysisSection, { getStockSignal } from '@/components/PortfolioAnalysisSection';
 import {
   parseExcelHoldings,
   parsePdfHoldings,
@@ -493,6 +495,23 @@ export default function PortfolioView({ onSelectStock }: Props) {
         </div>
       </div>
 
+      {/* Sector Allocation Interactive Pie / Donut Chart */}
+      {holdings.length > 0 && analytics.sectorAllocation.length > 0 && (
+        <SectorPieChart
+          data={analytics.sectorAllocation}
+          totalValue={analytics.totalCurrentValue}
+        />
+      )}
+
+      {/* Portfolio Institutional Analysis & Diagnostic Health Section */}
+      {holdings.length > 0 && (
+        <PortfolioAnalysisSection
+          holdings={holdings}
+          analytics={analytics}
+          onSelectStock={onSelectStock}
+        />
+      )}
+
       {/* Holdings Table */}
       <div className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-xs">
         <div className="p-4 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between">
@@ -557,12 +576,14 @@ export default function PortfolioView({ onSelectStock }: Props) {
                   <th className="py-3 px-4 text-right">P&amp;L</th>
                   <th className="py-3 px-4 text-right">Weight</th>
                   <th className="py-3 px-4 text-center">Quality</th>
+                  <th className="py-3 px-4 text-center">Signal</th>
                   <th className="py-3 px-4 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
                 {holdings.map((holding) => {
                   const isProfit = holding.unrealizedPnL >= 0;
+                  const signal = getStockSignal(holding);
                   return (
                     <tr
                       key={holding.id}
@@ -606,6 +627,15 @@ export default function PortfolioView({ onSelectStock }: Props) {
                       <td className="py-3.5 px-4 text-center">
                         <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-mono font-bold text-[11px] border border-indigo-100">
                           {holding.investorScores?.compositeScore ?? '--'}
+                        </span>
+                      </td>
+
+                      <td className="py-3.5 px-4 text-center">
+                        <span
+                          className={`px-2.5 py-0.5 rounded-md font-mono font-bold text-[10px] border ${signal.bgColor} ${signal.color} ${signal.borderColor}`}
+                          title={signal.reason}
+                        >
+                          {signal.action}
                         </span>
                       </td>
 
