@@ -74,6 +74,8 @@ export default function TechnicalWorkstationView() {
   // Watchlist from cloudSync
   const [myWatchlist, setMyWatchlist] = useState<string[]>([]);
   const [notificationMsg, setNotificationMsg] = useState<string | null>(null);
+  const [isAddingStockToWorkstation, setIsAddingStockToWorkstation] = useState(false);
+  const [newStockInput, setNewStockInput] = useState('');
 
   useEffect(() => {
     return cloudSync.subscribeData(data => {
@@ -523,9 +525,9 @@ export default function TechnicalWorkstationView() {
                 </div>
               </div>
 
-              {/* Watchlist Filter Selector */}
+              {/* Watchlist Filter Selector & Add Custom Stock Button */}
               <div className="flex items-center justify-between text-[11px] text-[#787b86]">
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <span>List:</span>
                   {(['NIFTY_50', 'MY_WATCHLIST'] as const).map(w => (
                     <button
@@ -538,9 +540,62 @@ export default function TechnicalWorkstationView() {
                       {w === 'NIFTY_50' ? 'NIFTY 50' : `My Watchlist (${myWatchlist.length})`}
                     </button>
                   ))}
+                  <button
+                    onClick={() => setIsAddingStockToWorkstation(!isAddingStockToWorkstation)}
+                    className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 font-bold text-[10px] cursor-pointer ml-1"
+                    title="Add custom stock to watchlist"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Add Stock</span>
+                  </button>
                 </div>
                 <span className="font-mono text-slate-400">{filteredItems.length} matched</span>
               </div>
+
+              {/* Add Custom Stock Input Row */}
+              {isAddingStockToWorkstation && (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const trimmed = newStockInput.trim().toUpperCase();
+                    if (!trimmed) return;
+                    const formatted = trimmed.endsWith('.NS') || trimmed.endsWith('.BO') ? trimmed : `${trimmed}.NS`;
+                    if (!myWatchlist.includes(formatted)) {
+                      const updated = [...myWatchlist, formatted];
+                      setMyWatchlist(updated);
+                      cloudSync.updateWatchlist(updated);
+                    }
+                    setSelectedSymbol(formatted);
+                    setSelectedWatchlist('MY_WATCHLIST');
+                    setNewStockInput('');
+                    setIsAddingStockToWorkstation(false);
+                    triggerToast(`Added ${formatted.replace('.NS', '')} to Watchlist`);
+                  }}
+                  className="bg-[#131722] p-2 rounded border border-[#2a2e39] flex items-center gap-1.5"
+                >
+                  <input
+                    type="text"
+                    autoFocus
+                    placeholder="Enter symbol (e.g. TRENT, BEL, SUZLON)..."
+                    value={newStockInput}
+                    onChange={(e) => setNewStockInput(e.target.value)}
+                    className="flex-1 bg-[#1e222d] border border-[#2a2e39] rounded px-2 py-1 text-xs text-white uppercase placeholder:normal-case placeholder:text-[#787b86] focus:outline-none focus:border-[#2962ff]"
+                  />
+                  <button
+                    type="submit"
+                    className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded cursor-pointer shrink-0"
+                  >
+                    Add
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingStockToWorkstation(false)}
+                    className="px-2 py-1 bg-[#2a2e39] text-[#787b86] hover:text-white text-xs rounded cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </form>
+              )}
             </div>
 
             {/* Results DataGrid Table */}

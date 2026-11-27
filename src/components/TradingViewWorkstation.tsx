@@ -82,6 +82,8 @@ export default function TradingViewWorkstation() {
   const [watchlist, setWatchlist] = useState<string[]>(['RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'TATAMOTORS.NS', 'ICICIBANK.NS']);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [customSymbolInput, setCustomSymbolInput] = useState('');
+  const [isAddingCustomStock, setIsAddingCustomStock] = useState(false);
 
   // Indicators Modal
   const [isIndicatorsModalOpen, setIsIndicatorsModalOpen] = useState(false);
@@ -656,9 +658,11 @@ export default function TradingViewWorkstation() {
 
               <div className="flex items-center gap-1 text-[#787b86]">
                 <button
-                  onClick={() => setIsSearchModalOpen(true)}
-                  className="p-1 rounded hover:bg-[#2a2e39] hover:text-white cursor-pointer"
-                  title="Add Symbol"
+                  onClick={() => setIsAddingCustomStock(!isAddingCustomStock)}
+                  className={`p-1 rounded cursor-pointer transition-colors ${
+                    isAddingCustomStock ? 'bg-[#2962ff] text-white' : 'hover:bg-[#2a2e39] hover:text-white'
+                  }`}
+                  title="Add Custom Symbol to Watchlist"
                 >
                   <Plus className="w-4 h-4" />
                 </button>
@@ -668,6 +672,57 @@ export default function TradingViewWorkstation() {
             {/* TAB 1: WATCHLIST */}
             {activeRightTab === 'watchlist' && (
               <div className="flex-1 flex flex-col overflow-hidden">
+                {/* Custom Stock Input Drawer */}
+                {isAddingCustomStock && (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const cleaned = customSymbolInput.trim().toUpperCase();
+                      if (!cleaned) return;
+                      const formatted = cleaned.endsWith('.NS') || cleaned.endsWith('.BO') ? cleaned : `${cleaned}.NS`;
+                      if (!watchlist.includes(formatted)) {
+                        const updated = [...watchlist, formatted];
+                        setWatchlist(updated);
+                        cloudSync.updateWatchlist(updated);
+                      }
+                      setSymbol(formatted);
+                      setCustomSymbolInput('');
+                      setIsAddingCustomStock(false);
+                    }}
+                    className="p-2.5 bg-[#131722] border-b border-[#2a2e39] flex flex-col gap-2"
+                  >
+                    <div className="text-[11px] font-semibold text-slate-300 flex items-center justify-between">
+                      <span>Add Custom Symbol to Watchlist:</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingCustomStock(false)}
+                        className="text-[#787b86] hover:text-white"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        autoFocus
+                        placeholder="e.g. TRENT, ZOMATO, SUZLON..."
+                        value={customSymbolInput}
+                        onChange={(e) => setCustomSymbolInput(e.target.value)}
+                        className="flex-1 bg-[#1e222d] border border-[#2a2e39] rounded px-2.5 py-1 text-xs text-white uppercase placeholder:normal-case placeholder:text-[#787b86] focus:outline-none focus:border-[#2962ff]"
+                      />
+                      <button
+                        type="submit"
+                        className="px-3 py-1 bg-[#2962ff] hover:bg-[#1e4bd8] text-white text-xs font-bold rounded cursor-pointer shrink-0 shadow-sm"
+                      >
+                        Add
+                      </button>
+                    </div>
+                    <div className="text-[10px] text-[#787b86]">
+                      Supports any NSE symbol. Live quotes & charts fetch automatically.
+                    </div>
+                  </form>
+                )}
+
                 {/* Watchlist Table Headers */}
                 <div className="px-3 py-1.5 text-[10px] font-bold text-[#787b86] flex items-center justify-between border-b border-[#2a2e39] bg-[#131722]">
                   <span>Symbol</span>
@@ -683,7 +738,7 @@ export default function TradingViewWorkstation() {
                     <div
                       key={item.symbol}
                       onClick={() => setSymbol(item.symbol)}
-                      className={`px-3 py-2 flex items-center justify-between cursor-pointer transition-colors ${
+                      className={`px-3 py-2 flex items-center justify-between cursor-pointer transition-colors group ${
                         item.isSelected ? 'bg-[#2962ff]/15 border-l-2 border-l-[#2962ff]' : 'hover:bg-[#1e222d]'
                       }`}
                     >
@@ -692,13 +747,31 @@ export default function TradingViewWorkstation() {
                         <div className="text-[10px] text-[#787b86]">NSE Cash</div>
                       </div>
 
-                      <div className="text-right font-mono">
-                        <div className="text-xs font-bold text-white">₹{item.price.toFixed(2)}</div>
-                        <div className={`text-[10px] font-bold ${
-                          item.changePct >= 0 ? 'text-[#089981]' : 'text-[#f23645]'
-                        }`}>
-                          {item.changePct >= 0 ? '+' : ''}{item.changePct.toFixed(2)}%
+                      <div className="flex items-center gap-2">
+                        <div className="text-right font-mono">
+                          <div className="text-xs font-bold text-white">₹{item.price.toFixed(2)}</div>
+                          <div className={`text-[10px] font-bold ${
+                            item.changePct >= 0 ? 'text-[#089981]' : 'text-[#f23645]'
+                          }`}>
+                            {item.changePct >= 0 ? '+' : ''}{item.changePct.toFixed(2)}%
+                          </div>
                         </div>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const updated = watchlist.filter(s => s !== item.symbol);
+                            setWatchlist(updated);
+                            cloudSync.updateWatchlist(updated);
+                            if (symbol === item.symbol && updated.length > 0) {
+                              setSymbol(updated[0]);
+                            }
+                          }}
+                          className="p-1 rounded text-[#787b86] hover:text-rose-400 hover:bg-[#2a2e39] opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Remove from Watchlist"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
                       </div>
                     </div>
                   ))}

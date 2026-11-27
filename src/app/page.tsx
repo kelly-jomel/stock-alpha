@@ -34,7 +34,15 @@ import {
   ShieldCheck,
   Award,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  ChevronDown,
+  Grid,
+  Filter,
+  Eye,
+  Database,
+  HelpCircle,
+  Settings,
+  BookmarkPlus
 } from 'lucide-react';
 
 export default function Home() {
@@ -64,6 +72,21 @@ export default function Home() {
   // Bar Replay state for Alpha backtester
   const [replayIdx, setReplayIdx] = useState<number>(-1);
   const [isReplaying, setIsReplaying] = useState(false);
+
+  // Header Dropdown Menus state
+  const [openHeaderMenu, setOpenHeaderMenu] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menus when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenHeaderMenu(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Load saved Google Cloud profile from localStorage
   useEffect(() => {
@@ -296,73 +319,254 @@ export default function Home() {
             )}
           </div>
 
-          {/* Clean 6-Pillar Modern Navigation */}
-          <nav className="flex items-center gap-1.5 text-xs font-semibold text-slate-300 shrink-0">
-            <button
-              onClick={() => setActiveTab('tradingview')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
-                activeTab === 'tradingview'
-                  ? 'bg-[#2962ff] text-white font-bold shadow-md'
-                  : 'hover:text-white hover:bg-slate-800 text-[#787b86]'
-              }`}
-            >
-              <BarChart2 className="w-3.5 h-3.5" />
-              <span>Chart Terminal</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('terminal_workstation')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
-                activeTab === 'terminal_workstation'
-                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold shadow-xs'
-                  : 'hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <Zap className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Technical Terminal</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('explore')}
-              className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
-                activeTab === 'explore'
-                  ? 'bg-slate-800 text-white font-bold shadow-2xs'
-                  : 'hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              Explore
-            </button>
-            <button
-              onClick={() => setActiveTab('portfolio')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
-                activeTab === 'portfolio'
-                  ? 'bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30 shadow-2xs'
-                  : 'hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <Wallet className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Portfolio &amp; Ideas</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('screener')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
-                activeTab === 'screener'
-                  ? 'bg-slate-800 text-white font-bold shadow-2xs'
-                  : 'hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <Sliders className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Screener &amp; Signals</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('terminal')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
-                activeTab === 'terminal'
-                  ? 'bg-slate-800 text-white font-bold shadow-xs'
-                  : 'hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <LineChart className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Pro Terminal</span>
-            </button>
+          {/* Reorganized Professional Menu with Sub-Menus */}
+          <nav ref={menuRef} className="flex items-center gap-1 text-xs font-semibold text-slate-300 shrink-0">
+            
+            {/* 1. Terminal Views Menu */}
+            <div className="relative">
+              <button
+                onClick={() => setOpenHeaderMenu(openHeaderMenu === 'terminals' ? null : 'terminals')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  activeTab === 'tradingview' || activeTab === 'terminal_workstation' || activeTab === 'terminal'
+                    ? 'bg-[#2962ff] text-white font-bold shadow-md'
+                    : 'hover:text-white hover:bg-slate-800 text-[#787b86]'
+                }`}
+              >
+                <BarChart2 className="w-3.5 h-3.5" />
+                <span>Workstations</span>
+                <ChevronDown className={`w-3 h-3 transition-transform ${openHeaderMenu === 'terminals' ? 'rotate-180' : ''}`} />
+              </button>
+
+              {openHeaderMenu === 'terminals' && (
+                <div className="absolute left-0 top-full mt-1.5 w-60 bg-[#1e222d] border border-[#2a2e39] rounded-xl shadow-2xl z-50 p-1.5 flex flex-col gap-1 text-xs">
+                  <button
+                    onClick={() => {
+                      setActiveTab('tradingview');
+                      setOpenHeaderMenu(null);
+                    }}
+                    className={`p-2 rounded-lg text-left flex items-start gap-2.5 transition-colors cursor-pointer ${
+                      activeTab === 'tradingview' ? 'bg-[#2962ff]/20 text-[#2962ff]' : 'hover:bg-[#2a2e39] text-[#d1d4dc]'
+                    }`}
+                  >
+                    <BarChart2 className="w-4 h-4 mt-0.5 shrink-0 text-[#2962ff]" />
+                    <div>
+                      <div className="font-bold text-white">TradingView Workstation</div>
+                      <div className="text-[10px] text-[#787b86]">Full-screen chart, drawing rail & broker feeds</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setActiveTab('terminal_workstation');
+                      setOpenHeaderMenu(null);
+                    }}
+                    className={`p-2 rounded-lg text-left flex items-start gap-2.5 transition-colors cursor-pointer ${
+                      activeTab === 'terminal_workstation' ? 'bg-emerald-500/20 text-emerald-400' : 'hover:bg-[#2a2e39] text-[#d1d4dc]'
+                    }`}
+                  >
+                    <Zap className="w-4 h-4 mt-0.5 shrink-0 text-emerald-400" />
+                    <div>
+                      <div className="font-bold text-white">Technical Workstation</div>
+                      <div className="text-[10px] text-[#787b86]">Dual-pane layout, 7 scan suites & F9/F12 keys</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setActiveTab('terminal');
+                      setOpenHeaderMenu(null);
+                    }}
+                    className={`p-2 rounded-lg text-left flex items-start gap-2.5 transition-colors cursor-pointer ${
+                      activeTab === 'terminal' ? 'bg-slate-700 text-white' : 'hover:bg-[#2a2e39] text-[#d1d4dc]'
+                    }`}
+                  >
+                    <LineChart className="w-4 h-4 mt-0.5 shrink-0 text-amber-400" />
+                    <div>
+                      <div className="font-bold text-white">Institutional Terminal</div>
+                      <div className="text-[10px] text-[#787b86]">Deep technical metrics, investor scores & bar replay</div>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* 2. Scanners & Technical Suites Menu */}
+            <div className="relative">
+              <button
+                onClick={() => setOpenHeaderMenu(openHeaderMenu === 'scanners' ? null : 'scanners')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  activeTab === 'screener'
+                    ? 'bg-slate-800 text-white font-bold'
+                    : 'hover:text-white hover:bg-slate-800 text-[#787b86]'
+                }`}
+              >
+                <Sliders className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Scanners</span>
+                <ChevronDown className={`w-3 h-3 transition-transform ${openHeaderMenu === 'scanners' ? 'rotate-180' : ''}`} />
+              </button>
+
+              {openHeaderMenu === 'scanners' && (
+                <div className="absolute left-0 top-full mt-1.5 w-64 bg-[#1e222d] border border-[#2a2e39] rounded-xl shadow-2xl z-50 p-1.5 flex flex-col gap-1 text-xs">
+                  <button
+                    onClick={() => {
+                      setActiveTab('screener');
+                      setOpenHeaderMenu(null);
+                    }}
+                    className="p-2 rounded-lg text-left flex items-start gap-2.5 hover:bg-[#2a2e39] text-[#d1d4dc] cursor-pointer"
+                  >
+                    <Filter className="w-4 h-4 mt-0.5 shrink-0 text-indigo-400" />
+                    <div>
+                      <div className="font-bold text-white">Alpha Signals & Screener</div>
+                      <div className="text-[10px] text-[#787b86]">Multi-indicator scanner with confidence scoring</div>
+                    </div>
+                  </button>
+
+                  <div className="border-t border-[#2a2e39] my-1 pt-1 px-2 text-[10px] font-bold uppercase tracking-wider text-[#787b86]">
+                    Technical Scan Categories
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setActiveTab('terminal_workstation');
+                      setOpenHeaderMenu(null);
+                    }}
+                    className="px-2 py-1.5 rounded-lg text-left hover:bg-[#2a2e39] text-[#d1d4dc] text-xs flex items-center justify-between cursor-pointer"
+                  >
+                    <span>KeyZones & Support/Resistance</span>
+                    <span className="text-[10px] font-mono text-emerald-400">12 Scrips</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setActiveTab('terminal_workstation');
+                      setOpenHeaderMenu(null);
+                    }}
+                    className="px-2 py-1.5 rounded-lg text-left hover:bg-[#2a2e39] text-[#d1d4dc] text-xs flex items-center justify-between cursor-pointer"
+                  >
+                    <span>Gann Pivots & Swings</span>
+                    <span className="text-[10px] font-mono text-sky-400">8 Scrips</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setActiveTab('terminal_workstation');
+                      setOpenHeaderMenu(null);
+                    }}
+                    className="px-2 py-1.5 rounded-lg text-left hover:bg-[#2a2e39] text-[#d1d4dc] text-xs flex items-center justify-between cursor-pointer"
+                  >
+                    <span>Fibonacci Retracement S/R</span>
+                    <span className="text-[10px] font-mono text-purple-400">15 Scrips</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setActiveTab('terminal_workstation');
+                      setOpenHeaderMenu(null);
+                    }}
+                    className="px-2 py-1.5 rounded-lg text-left hover:bg-[#2a2e39] text-[#d1d4dc] text-xs flex items-center justify-between cursor-pointer"
+                  >
+                    <span>30-Day Volume Shockers</span>
+                    <span className="text-[10px] font-mono text-amber-400">9 Scrips</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* 3. Markets & Explore Menu */}
+            <div className="relative">
+              <button
+                onClick={() => setOpenHeaderMenu(openHeaderMenu === 'markets' ? null : 'markets')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  activeTab === 'explore' || activeTab === 'market-movers-all'
+                    ? 'bg-slate-800 text-white font-bold'
+                    : 'hover:text-white hover:bg-slate-800 text-[#787b86]'
+                }`}
+              >
+                <Compass className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Markets</span>
+                <ChevronDown className={`w-3 h-3 transition-transform ${openHeaderMenu === 'markets' ? 'rotate-180' : ''}`} />
+              </button>
+
+              {openHeaderMenu === 'markets' && (
+                <div className="absolute left-0 top-full mt-1.5 w-56 bg-[#1e222d] border border-[#2a2e39] rounded-xl shadow-2xl z-50 p-1.5 flex flex-col gap-1 text-xs">
+                  <button
+                    onClick={() => {
+                      setActiveTab('explore');
+                      setOpenHeaderMenu(null);
+                    }}
+                    className="p-2 rounded-lg text-left flex items-start gap-2.5 hover:bg-[#2a2e39] text-[#d1d4dc] cursor-pointer"
+                  >
+                    <Compass className="w-4 h-4 mt-0.5 shrink-0 text-cyan-400" />
+                    <div>
+                      <div className="font-bold text-white">Market Overview & Movers</div>
+                      <div className="text-[10px] text-[#787b86]">Top gainers, losers, sectors & volume shockers</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setActiveTab('market-movers-all');
+                      setOpenHeaderMenu(null);
+                    }}
+                    className="p-2 rounded-lg text-left flex items-start gap-2.5 hover:bg-[#2a2e39] text-[#d1d4dc] cursor-pointer"
+                  >
+                    <TrendingUp className="w-4 h-4 mt-0.5 shrink-0 text-emerald-400" />
+                    <div>
+                      <div className="font-bold text-white">All Market Movers</div>
+                      <div className="text-[10px] text-[#787b86]">Complete NSE stock performance universe</div>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* 4. Portfolio & Watchlist Menu */}
+            <div className="relative">
+              <button
+                onClick={() => setOpenHeaderMenu(openHeaderMenu === 'portfolio' ? null : 'portfolio')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  activeTab === 'portfolio'
+                    ? 'bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30'
+                    : 'hover:text-white hover:bg-slate-800 text-[#787b86]'
+                }`}
+              >
+                <Wallet className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Portfolio</span>
+                <ChevronDown className={`w-3 h-3 transition-transform ${openHeaderMenu === 'portfolio' ? 'rotate-180' : ''}`} />
+              </button>
+
+              {openHeaderMenu === 'portfolio' && (
+                <div className="absolute right-0 lg:left-0 top-full mt-1.5 w-60 bg-[#1e222d] border border-[#2a2e39] rounded-xl shadow-2xl z-50 p-1.5 flex flex-col gap-1 text-xs">
+                  <button
+                    onClick={() => {
+                      setActiveTab('portfolio');
+                      setOpenHeaderMenu(null);
+                    }}
+                    className="p-2 rounded-lg text-left flex items-start gap-2.5 hover:bg-[#2a2e39] text-[#d1d4dc] cursor-pointer"
+                  >
+                    <Wallet className="w-4 h-4 mt-0.5 shrink-0 text-emerald-400" />
+                    <div>
+                      <div className="font-bold text-white">Unified Portfolio Hub</div>
+                      <div className="text-[10px] text-[#787b86]">Live holdings, P&L, sector allocation & ideas</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setActiveTab('tradingview');
+                      setOpenHeaderMenu(null);
+                    }}
+                    className="p-2 rounded-lg text-left flex items-start gap-2.5 hover:bg-[#2a2e39] text-[#d1d4dc] cursor-pointer"
+                  >
+                    <BookmarkPlus className="w-4 h-4 mt-0.5 shrink-0 text-amber-400" />
+                    <div>
+                      <div className="font-bold text-white">Manage Watchlists</div>
+                      <div className="text-[10px] text-[#787b86]">Add custom symbols, cloud sync & real-time alerts</div>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
           </nav>
 
           {/* Cloud Sync Status & Google Cloud Sign-In Button */}
