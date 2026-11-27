@@ -82,7 +82,15 @@ export default function PortfolioView({ onSelectStock }: Props) {
         try {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            baseList = parsed;
+            // Check if saved portfolio has stale/erroneous 'LT.NS' or missing symbols
+            const hasErroneousLT = parsed.some((p: any) => p.symbol === 'LT.NS');
+            if (hasErroneousLT) {
+              console.log('Detected stale portfolio with false LT.NS match, migrating to verified 55 statement holdings');
+              baseList = DEFAULT_KELLY_HOLDINGS;
+              localStorage.setItem('stock_alpha_portfolio', JSON.stringify(DEFAULT_KELLY_HOLDINGS));
+            } else {
+              baseList = parsed;
+            }
           }
         } catch {
           // fallback

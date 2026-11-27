@@ -225,10 +225,74 @@ const INDIAN_NAME_MAP: Record<string, string> = {
 };
 
 /**
+ * Exact ISIN mappings to guaranteed NSE / BSE tickers.
+ */
+export const ISIN_TO_SYMBOL_MAP: Record<string, string> = {
+  'INE012A01025': 'ACC.NS',
+  'INE14LE01019': 'ABLBL.NS',
+  'INE483S01038': 'CCAVENUE.NS',
+  'INE084A01016': 'BANKINDIA.NS',
+  'INE457A01014': 'MAHABANK.NS',
+  'INE258A01024': 'BEML.NS',
+  'INE171Z01026': 'BDL.NS',
+  'INE067A01029': 'CGPOWER.NS',
+  'INE522F01014': 'COALINDIA.NS',
+  'INE704P01025': 'COCHINSHIP.NS',
+  'INE111A01025': 'CONCOR.NS',
+  'INE0KL801015': 'DCXINDIA.NS',
+  'INE935N01020': 'DIXON.NS',
+  'INE04TZ01018': 'ETHOSLTD.NS',
+  'INE129A01019': 'GAIL.NS',
+  'INE382Z01011': 'GRSE.NS',
+  'INE517F01014': 'GPPL.NS',
+  'INE860A01027': 'HCLTECH.NS',
+  'INE040A01034': 'HDFCBANK.NS',
+  'INE0V6F01027': 'HYUNDAI.NS',
+  'INE335Y01020': 'IRCTC.NS',
+  'INE053F01010': 'IRFC.NS',
+  'INE009A01021': 'INFY.NS',
+  'INE962Y01021': 'IRCON.NS',
+  'INE927D01051': 'JBMA.NS',
+  'INE573A01042': 'JKTYRE.NS',
+  'INE559R01029': 'LANDMARK.NS',
+  'INE324D01010': 'LGEINDIA.NS',
+  'INE196A01026': 'MARICO.NS',
+  'INE249Z01020': 'MAZDOCK.NS',
+  'INE935B01025': 'MOSCHIP.NS',
+  'INF204KC1402': 'SILVERBEES.NS',
+  'INE213A01029': 'ONGC.NS',
+  'INE0LXG01040': 'OLAELEC.NS',
+  'INE260D01016': 'OLECTRA.NS',
+  'INE134E01011': 'PFC.NS',
+  'INE415G01027': 'RVNL.NS',
+  'INE0DD101019': 'RAILTEL.NS',
+  'INE834M01019': 'RTNINDIA.NS',
+  'INE020B01018': 'RECLTD.NS',
+  'INE320J01015': 'RITES.NS',
+  'INE109A01011': 'SCI.NS',
+  'INE976I01016': 'TATACAP.BO',
+  'INE192A01025': 'TATACONSUM.NS',
+  'INE670A01012': 'TATAELXSI.NS',
+  'INE672A01026': 'TATAINVEST.NS',
+  'INE155A01022': 'TMPV.NS',
+  'INE245A01021': 'TATAPOWER.NS',
+  'INE081A01020': 'TATASTEEL.NS',
+  'INF277KA1976': 'TATAGOLD.NS',
+  'INE053A01029': 'INDHOTEL.NS',
+  'INE615H01020': 'TITAGARH.NS',
+  'INE0CAZ01013': 'URBAN.BO',
+  'INE205A01025': 'VEDL.NS',
+  'INE075A01022': 'WIPRO.NS'
+};
+
+/**
  * Normalizes user/broker symbol input to match official NSE / BSE symbols.
  * Handles company names, clean scrip names, and broker naming conventions (e.g. -EQ, -BE).
  */
-export function normalizeSymbol(raw: string): string {
+export function normalizeSymbol(raw: string, isin?: string): string {
+  if (isin && ISIN_TO_SYMBOL_MAP[isin.trim().toUpperCase()]) {
+    return ISIN_TO_SYMBOL_MAP[isin.trim().toUpperCase()];
+  }
   if (!raw) return '';
   const trimmed = raw.trim();
 
@@ -252,11 +316,12 @@ export function normalizeSymbol(raw: string): string {
     return INDIAN_NAME_MAP[strippedSuffix];
   }
 
-  // 3. Search STOCK_UNIVERSE
+  // 3. Search STOCK_UNIVERSE by EXACT symbol or exact company name
   const universeMatch = STOCK_UNIVERSE.find(
     s => s.symbol.replace('.NS', '').replace('.BO', '') === strippedSuffix ||
-         s.name.toUpperCase().replace(/[^A-Z0-9]/g, '').includes(strippedSuffix) ||
-         alphanumericUpper.includes(s.symbol.replace('.NS', '').replace('.BO', ''))
+         s.symbol.replace('.NS', '').replace('.BO', '') === alphanumericUpper ||
+         s.name.toUpperCase().replace(/[^A-Z0-9]/g, '') === alphanumericUpper ||
+         s.name.toUpperCase().replace(/[^A-Z0-9]/g, '') === strippedSuffix
   );
 
   if (universeMatch) return universeMatch.symbol;
@@ -673,11 +738,11 @@ export async function parseExcelHoldings(file: File): Promise<ParsedHoldingItem[
 
     if (rawQty <= 0) continue;
 
-    const normalized = normalizeSymbol(rawSym);
+    const isin = isinCol !== -1 ? String(row[isinCol] || '').trim() : undefined;
+    const normalized = normalizeSymbol(rawSym, isin);
     const closingPrice = closingPriceCol !== -1 ? parseNumberCell(row[closingPriceCol]) : undefined;
     const closingValue = closingValueCol !== -1 ? parseNumberCell(row[closingValueCol]) : undefined;
     const unrealizedPnL = unrealizedPnLCol !== -1 ? parseNumberCell(row[unrealizedPnLCol]) : undefined;
-    const isin = isinCol !== -1 ? String(row[isinCol] || '').trim() : undefined;
 
     results.push({
       symbol: normalized,
