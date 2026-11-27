@@ -5,7 +5,12 @@ export interface ParsedHoldingItem {
   symbol: string;
   shares: number;
   avgBuy: number;
+  closingPrice?: number;
+  closingValue?: number;
+  unrealizedPnL?: number;
   rawName?: string;
+  isin?: string;
+  statementDate?: string;
   tradeCount?: number;
   totalBought?: number;
   totalSold?: number;
@@ -150,7 +155,73 @@ const INDIAN_NAME_MAP: Record<string, string> = {
   'LGEINDIA': 'LGEINDIA.NS',
   'LGELECTRONICSINDIALTD': 'LGEINDIA.NS',
   'TATAGOLD': 'TATAGOLD.NS',
-  'TATAAMLTATAGOLD': 'TATAGOLD.NS'
+  'TATAAMLTATAGOLD': 'TATAGOLD.NS',
+
+  // All 55 Holdings from Kelly Fernandes's Statement
+  'BANKOFINDIA': 'BANKINDIA.NS',
+  'BANKOFMAHARASHTRA': 'MAHABANK.NS',
+  'BHARATDYNAMICS': 'BDL.NS',
+  'BHARATDYNAMICSLIMITED': 'BDL.NS',
+  'BDL': 'BDL.NS',
+  'CGPOWER': 'CGPOWER.NS',
+  'CGPOWERANDINDSOL': 'CGPOWER.NS',
+  'CGPOWERANDINDSOLLTD': 'CGPOWER.NS',
+  'CONTAINERCORPOFINDLTD': 'CONCOR.NS',
+  'CONTAINERCORP': 'CONCOR.NS',
+  'CONCOR': 'CONCOR.NS',
+  'DCXSYSTEMS': 'DCXINDIA.NS',
+  'DCXSYSTEMSLIMITED': 'DCXINDIA.NS',
+  'DCXINDIA': 'DCXINDIA.NS',
+  'DIXON': 'DIXON.NS',
+  'DIXONTECHNOINDIALTD': 'DIXON.NS',
+  'DIXONTECHNOLOGIES': 'DIXON.NS',
+  'GARDENREACHSHIPENGLTD': 'GRSE.NS',
+  'GARDENREACHSHIPENG': 'GRSE.NS',
+  'GRSE': 'GRSE.NS',
+  'GUJARATPIPAVAVPORTLTD': 'GPPL.NS',
+  'GUJARATPIPAVAV': 'GPPL.NS',
+  'GPPL': 'GPPL.NS',
+  'HCLTECHNOLOGIESLTD': 'HCLTECH.NS',
+  'HCLTECHNOLOGIES': 'HCLTECH.NS',
+  'IRCON': 'IRCON.NS',
+  'IRCONINTERNATIONALLTD': 'IRCON.NS',
+  'LANDMARKCARS': 'LANDMARK.NS',
+  'LANDMARKCARSLIMITED': 'LANDMARK.NS',
+  'LANDMARK': 'LANDMARK.NS',
+  'MARICO': 'MARICO.NS',
+  'MARICOLIMITED': 'MARICO.NS',
+  'MOSCHIP': 'MOSCHIP.NS',
+  'MOSCHIPTECHNOLOGIESLTD': 'MOSCHIP.NS',
+  'MOSCHIPTECH': 'MOSCHIP.NS',
+  'OILANDNATURALGASCORP': 'ONGC.NS',
+  'POWERFINCORPLTD': 'PFC.NS',
+  'POWERFINANCECORP': 'PFC.NS',
+  'PFC': 'PFC.NS',
+  'RAILTEL': 'RAILTEL.NS',
+  'RAILTELCORPOFINDLTD': 'RAILTEL.NS',
+  'REC': 'RECLTD.NS',
+  'RECLTD': 'RECLTD.NS',
+  'RECLIMITED': 'RECLTD.NS',
+  'RITES': 'RITES.NS',
+  'RITESLIMITED': 'RITES.NS',
+  'SHIPPINGCORPOFINDIALT': 'SCI.NS',
+  'SHIPPINGCORPOFINDIA': 'SCI.NS',
+  'SCI': 'SCI.NS',
+  'TATACAPITAL': 'TATACAP.BO',
+  'TATACAPITALLIMITED': 'TATACAP.BO',
+  'TATACAP': 'TATACAP.BO',
+  'TATAINVESTMENTCORPLTD': 'TATAINVEST.NS',
+  'TATAINVESTMENT': 'TATAINVEST.NS',
+  'TATAINVEST': 'TATAINVEST.NS',
+  'TITAGARH': 'TITAGARH.NS',
+  'TITAGARHRAILSYSTEMSLTD': 'TITAGARH.NS',
+  'TITAGARHRAIL': 'TITAGARH.NS',
+  'URBANCOMPANY': 'URBAN.BO',
+  'URBANCOMPANYLIMITED': 'URBAN.BO',
+  'URBAN': 'URBAN.BO',
+  'VEDANTA': 'VEDL.NS',
+  'VEDANTALIMITED': 'VEDL.NS',
+  'VEDL': 'VEDL.NS'
 };
 
 /**
@@ -457,9 +528,27 @@ export async function parseExcelHoldings(file: File): Promise<ParsedHoldingItem[
 
   let headerRowIndex = -1;
   let symbolCol = -1;
+  let isinCol = -1;
   let qtyCol = -1;
   let priceCol = -1;
   let valueCol = -1;
+  let closingPriceCol = -1;
+  let closingValueCol = -1;
+  let unrealizedPnLCol = -1;
+  let detectedDate: string | undefined = undefined;
+
+  // Check top rows for statement date (e.g., 'Holdings statement for stocks as on 26-11-2026')
+  for (let r = 0; r < Math.min(jsonData.length, 10); r++) {
+    const row = jsonData[r] as unknown[];
+    if (!Array.isArray(row)) continue;
+    for (let c = 0; c < row.length; c++) {
+      const cellText = String(row[c] || '').trim();
+      const match = cellText.match(/as on\s+([0-9]{1,2}[-/][0-9]{1,2}[-/][0-9]{4})/i);
+      if (match) {
+        detectedDate = match[1];
+      }
+    }
+  }
 
   for (let r = 0; r < Math.min(jsonData.length, 25); r++) {
     const row = jsonData[r] as unknown[];
@@ -467,7 +556,9 @@ export async function parseExcelHoldings(file: File): Promise<ParsedHoldingItem[
 
     for (let c = 0; c < row.length; c++) {
       const cell = String(row[c] || '').toLowerCase().trim();
-      if (cell === 'symbol' || cell === 'scrip' || cell === 'instrument' || cell === 'ticker') {
+      if (cell === 'isin' || cell.includes('isin')) {
+        isinCol = c;
+      } else if (cell === 'symbol' || cell === 'scrip' || cell === 'instrument' || cell === 'ticker') {
         symbolCol = c;
       } else if (
         symbolCol === -1 &&
@@ -488,9 +579,33 @@ export async function parseExcelHoldings(file: File): Promise<ParsedHoldingItem[
       ) {
         if (qtyCol === -1) qtyCol = c;
       } else if (
+        cell.includes('closing price') ||
+        cell.includes('close price') ||
+        cell.includes('ltp') ||
+        cell.includes('market price') ||
+        cell.includes('cmp')
+      ) {
+        if (closingPriceCol === -1) closingPriceCol = c;
+      } else if (
+        cell.includes('closing value') ||
+        cell.includes('close value') ||
+        cell.includes('current val') ||
+        cell.includes('market val')
+      ) {
+        if (closingValueCol === -1) closingValueCol = c;
+      } else if (
+        cell.includes('unrealised') ||
+        cell.includes('unrealized') ||
+        cell.includes('p&l') ||
+        cell.includes('profit/loss')
+      ) {
+        if (unrealizedPnLCol === -1) unrealizedPnLCol = c;
+      } else if (
+        cell.includes('buy val') ||
+        cell.includes('invested') ||
+        cell.includes('cost val') ||
         cell === 'value' ||
         cell.includes('investment') ||
-        cell.includes('current val') ||
         cell.includes('total amount')
       ) {
         if (valueCol === -1) valueCol = c;
@@ -546,7 +661,7 @@ export async function parseExcelHoldings(file: File): Promise<ParsedHoldingItem[
     // Fallback scan for price if designated column had 0
     if (rawPrice <= 0) {
       for (let c = 0; c < row.length; c++) {
-        if (c !== symbolCol && c !== qtyCol && c !== valueCol) {
+        if (c !== symbolCol && c !== qtyCol && c !== valueCol && c !== closingPriceCol && c !== closingValueCol) {
           const val = parseNumberCell(row[c]);
           if (val > 0.05 && val < 500000 && val !== rawQty) {
             rawPrice = rawQty > 1 && val > rawQty * 10 ? val / rawQty : val;
@@ -559,11 +674,20 @@ export async function parseExcelHoldings(file: File): Promise<ParsedHoldingItem[
     if (rawQty <= 0) continue;
 
     const normalized = normalizeSymbol(rawSym);
+    const closingPrice = closingPriceCol !== -1 ? parseNumberCell(row[closingPriceCol]) : undefined;
+    const closingValue = closingValueCol !== -1 ? parseNumberCell(row[closingValueCol]) : undefined;
+    const unrealizedPnL = unrealizedPnLCol !== -1 ? parseNumberCell(row[unrealizedPnLCol]) : undefined;
+    const isin = isinCol !== -1 ? String(row[isinCol] || '').trim() : undefined;
 
     results.push({
       symbol: normalized,
       shares: Math.round(rawQty),
       avgBuy: rawPrice > 0 ? Number(rawPrice.toFixed(2)) : 100,
+      closingPrice: closingPrice && closingPrice > 0 ? Number(closingPrice.toFixed(2)) : undefined,
+      closingValue: closingValue && closingValue > 0 ? Number(closingValue.toFixed(2)) : undefined,
+      unrealizedPnL: unrealizedPnL !== undefined ? Number(unrealizedPnL.toFixed(2)) : undefined,
+      statementDate: detectedDate,
+      isin,
       rawName: rawSym
     });
   }

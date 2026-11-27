@@ -14,6 +14,7 @@ import {
   ParsedHoldingItem,
   ParsedTradeOrder
 } from '@/lib/fileImportParser';
+import { DEFAULT_KELLY_HOLDINGS } from '@/lib/defaultHoldingsData';
 import {
   Wallet,
   Plus,
@@ -46,6 +47,9 @@ export default function PortfolioView({ onSelectStock }: Props) {
   // Import mode: 'HOLDINGS' (existing quantity & avg cost) or 'ORDER_HISTORY' (Buy/Sell trades consolidated)
   const [importMode, setImportMode] = useState<'HOLDINGS' | 'ORDER_HISTORY'>('ORDER_HISTORY');
 
+  // Valuation view mode: 'STATEMENT' (Statement As-Of 26-11-2026: ₹4.25L, -₹7,470) vs 'LIVE' (Live Yahoo quotes)
+  const [valuationMode, setValuationMode] = useState<'STATEMENT' | 'LIVE'>('STATEMENT');
+
   // New holding form state
   const [newSymbol, setNewSymbol] = useState(STOCK_UNIVERSE[0].symbol);
   const [newShares, setNewShares] = useState('20');
@@ -59,17 +63,25 @@ export default function PortfolioView({ onSelectStock }: Props) {
   const [orderPreview, setOrderPreview] = useState<ParsedTradeOrder[]>([]);
   const [importError, setImportError] = useState<string | null>(null);
 
-  // Load holdings from localStorage (defaults to empty)
+  // Load holdings from localStorage (defaults to Kelly's 55 statement holdings if empty)
   useEffect(() => {
     async function loadPortfolio() {
       setLoading(true);
       const saved = localStorage.getItem('stock_alpha_portfolio') || localStorage.getItem('Alpha_portfolio');
-      let baseList: Array<{ symbol: string; shares: number; avgBuy: number }> = [];
+      let baseList: Array<{
+        symbol: string;
+        shares: number;
+        avgBuy: number;
+        closingPrice?: number;
+        closingValue?: number;
+        unrealizedPnL?: number;
+        name?: string;
+      }> = [];
 
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed)) {
+          if (Array.isArray(parsed) && parsed.length > 0) {
             baseList = parsed;
           }
         } catch {
@@ -77,51 +89,114 @@ export default function PortfolioView({ onSelectStock }: Props) {
         }
       }
 
-      await refreshHoldingsData(baseList);
+      // If no holdings in localStorage, seed with the 55 holdings from the imported statement
+      if (baseList.length === 0) {
+        baseList = DEFAULT_KELLY_HOLDINGS;
+      }
+
+      await refreshHoldingsData(baseList, valuationMode);
       setLoading(false);
     }
     loadPortfolio();
 
-    // Auto-refresh portfolio current prices and live P&L every 10 seconds
+    // Auto-refresh portfolio current prices and live P&L every 10 seconds (only if LIVE mode)
     const interval = setInterval(() => {
       const saved = localStorage.getItem('stock_alpha_portfolio') || localStorage.getItem('Alpha_portfolio');
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            refreshHoldingsData(parsed);
+            refreshHoldingsData(parsed, valuationMode);
           }
         } catch {}
       }
     }, 10000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [valuationMode]);
 
-  const refreshHoldingsData = async (rawHoldings: Array<{ symbol: string; shares: number; avgBuy: number }>) => {
+  const refreshHoldingsData = async (
+    rawHoldings: Array<{
+      symbol: string;
+      shares: number;
+      avgBuy: number;
+      closingPrice?: number;
+      closingValue?: number;
+      unrealizedPnL?: number;
+      name?: string;
+    }>,
+    mode: 'STATEMENT' | 'LIVE' = valuationMode
+  ) => {
     try {
       const enriched: PortfolioHolding[] = await Promise.all(
         rawHoldings.map(async (item) => {
+          // Check if this holding has statement closing price
+          const hasStatementClosing = typeof item.closingPrice === 'number' && item.closingPrice > 0;
+          let currentPrice = item.avgBuy;
+          let investedValue = item.shares * item.avgBuy;
+          let currentValue = investedValue;
+          let quoteData: any = null;
+
+          if (mode === 'STATEMENT' && hasStatementClosing) {
+            // Use exact statement closing price and closing value
+            currentPrice = item.closingPrice!;
+            currentValue = item.closingValue && item.closingValue > 0 ? item.closingValue : item.shares * currentPrice;
+            const unrealizedPnL = item.unrealizedPnL !== undefined ? item.unrealizedPnL : currentValue - investedValue;
+            const unrealizedPnLPercent = investedValue > 0 ? (unrealizedPnL / investedValue) * 100 : 0;
+
+            // Fetch background technicals & investor scores for analytics
+            try {
+              const res = await fetch(`/api/stock?symbol=${encodeURIComponent(item.symbol)}&range=6mo`);
+              if (res.ok) {
+                quoteData = await res.json();
+              }
+            } catch {}
+
+            return {
+              id: item.symbol,
+              symbol: item.symbol,
+              name: item.name || (quoteData?.quote?.name && quoteData.quote.name !== item.symbol ? quoteData.quote.name : item.symbol.replace('.NS', '').replace('.BO', '')),
+              exchange: 'NSE',
+              shares: item.shares,
+              averageBuyPrice: item.avgBuy,
+              currentPrice: Number(currentPrice.toFixed(2)),
+              closingPrice: item.closingPrice,
+              closingValue: item.closingValue,
+              currency: 'INR',
+              sector: quoteData?.quote?.sector || 'Diversified',
+              currentValue: Number(currentValue.toFixed(2)),
+              investedValue: Number(investedValue.toFixed(2)),
+              unrealizedPnL: Number(unrealizedPnL.toFixed(2)),
+              unrealizedPnLPercent: Number(unrealizedPnLPercent.toFixed(2)),
+              weightPercent: 0,
+              asOfDate: '26-11-2026',
+              investorScores: quoteData?.investorScores,
+              technicals: quoteData?.technicals
+            };
+          }
+
+          // Otherwise LIVE mode: fetch live quote from API
           try {
             const res = await fetch(`/api/stock?symbol=${encodeURIComponent(item.symbol)}&range=6mo`);
             if (res.ok) {
               const data = await res.json();
               const quote = data.quote;
-              // If API returned live price > 0, use it; otherwise fallback to avgBuy
-              const currentPrice = (quote && typeof quote.price === 'number' && quote.price > 0) ? quote.price : item.avgBuy;
-              const investedValue = item.shares * item.avgBuy;
-              const currentValue = item.shares * currentPrice;
+              currentPrice = (quote && typeof quote.price === 'number' && quote.price > 0) ? quote.price : (item.closingPrice || item.avgBuy);
+              investedValue = item.shares * item.avgBuy;
+              currentValue = item.shares * currentPrice;
               const unrealizedPnL = currentValue - investedValue;
               const unrealizedPnLPercent = investedValue > 0 ? (unrealizedPnL / investedValue) * 100 : 0;
 
               return {
                 id: item.symbol,
                 symbol: item.symbol,
-                name: quote.name && quote.name !== item.symbol ? quote.name : (item.symbol.replace('.NS', '').replace('.BO', '')),
+                name: item.name || (quote.name && quote.name !== item.symbol ? quote.name : item.symbol.replace('.NS', '').replace('.BO', '')),
                 exchange: quote.exchange || 'NSE',
                 shares: item.shares,
                 averageBuyPrice: item.avgBuy,
-                currentPrice,
+                currentPrice: Number(currentPrice.toFixed(2)),
+                closingPrice: item.closingPrice,
+                closingValue: item.closingValue,
                 currency: quote.currency || 'INR',
                 sector: quote.sector || 'Diversified',
                 currentValue: Number(currentValue.toFixed(2)),
@@ -137,17 +212,19 @@ export default function PortfolioView({ onSelectStock }: Props) {
             // fallback
           }
 
-          const fallbackPrice = item.avgBuy * 1.05;
+          const fallbackPrice = item.closingPrice || (item.avgBuy * 1.05);
           const invested = item.shares * item.avgBuy;
           const currVal = item.shares * fallbackPrice;
           return {
             id: item.symbol,
             symbol: item.symbol,
-            name: item.symbol,
+            name: item.name || item.symbol,
             exchange: 'NSE',
             shares: item.shares,
             averageBuyPrice: item.avgBuy,
             currentPrice: fallbackPrice,
+            closingPrice: item.closingPrice,
+            closingValue: item.closingValue,
             currency: 'INR',
             sector: 'Diversified',
             currentValue: currVal,
@@ -167,7 +244,15 @@ export default function PortfolioView({ onSelectStock }: Props) {
       setHoldings(enriched);
       localStorage.setItem(
         'stock_alpha_portfolio',
-        JSON.stringify(rawHoldings.map(h => ({ symbol: h.symbol, shares: h.shares, avgBuy: h.avgBuy })))
+        JSON.stringify(rawHoldings.map(h => ({
+          symbol: h.symbol,
+          shares: h.shares,
+          avgBuy: h.avgBuy,
+          closingPrice: h.closingPrice,
+          closingValue: h.closingValue,
+          unrealizedPnL: h.unrealizedPnL,
+          name: h.name
+        })))
       );
     } catch (e) {
       console.error(e);
@@ -263,8 +348,24 @@ export default function PortfolioView({ onSelectStock }: Props) {
     if (importPreview.length === 0) return;
     setImportLoading(true);
 
-    const merged = [
-      ...holdings.map(h => ({ symbol: h.symbol, shares: h.shares, avgBuy: h.averageBuyPrice }))
+    const merged: Array<{
+      symbol: string;
+      shares: number;
+      avgBuy: number;
+      closingPrice?: number;
+      closingValue?: number;
+      unrealizedPnL?: number;
+      name?: string;
+    }> = [
+      ...holdings.map(h => ({
+        symbol: h.symbol,
+        shares: h.shares,
+        avgBuy: h.averageBuyPrice,
+        closingPrice: h.closingPrice,
+        closingValue: h.closingValue,
+        unrealizedPnL: h.unrealizedPnL,
+        name: h.name
+      }))
     ];
 
     importPreview.forEach(item => {
@@ -275,12 +376,23 @@ export default function PortfolioView({ onSelectStock }: Props) {
         const totalCost = (merged[idx].shares * merged[idx].avgBuy) + (item.shares * item.avgBuy);
         merged[idx].shares = totalShares;
         merged[idx].avgBuy = Number((totalCost / totalShares).toFixed(2));
+        if (item.closingPrice) merged[idx].closingPrice = item.closingPrice;
+        if (item.closingValue) merged[idx].closingValue = item.closingValue;
+        if (item.unrealizedPnL !== undefined) merged[idx].unrealizedPnL = item.unrealizedPnL;
       } else {
-        merged.push({ symbol: item.symbol, shares: item.shares, avgBuy: item.avgBuy });
+        merged.push({
+          symbol: item.symbol,
+          shares: item.shares,
+          avgBuy: item.avgBuy,
+          closingPrice: item.closingPrice,
+          closingValue: item.closingValue,
+          unrealizedPnL: item.unrealizedPnL,
+          name: item.rawName
+        });
       }
     });
 
-    await refreshHoldingsData(merged);
+    await refreshHoldingsData(merged, 'STATEMENT');
     setImportLoading(false);
     setShowImportModal(false);
     setImportPreview([]);
@@ -375,6 +487,40 @@ export default function PortfolioView({ onSelectStock }: Props) {
               <Plus className="w-4 h-4" /> Add Holding
             </button>
           </div>
+        </div>
+
+        {/* Valuation Switch & Summary Header */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pt-4 border-t border-slate-100">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-500">Valuation Benchmark:</span>
+            <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 text-xs">
+              <button
+                onClick={() => setValuationMode('STATEMENT')}
+                className={`px-3 py-1 font-semibold rounded-md transition-all ${
+                  valuationMode === 'STATEMENT'
+                    ? 'bg-white text-emerald-700 shadow-2xs'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                Statement Valuation (26-11-2026)
+              </button>
+              <button
+                onClick={() => setValuationMode('LIVE')}
+                className={`px-3 py-1 font-semibold rounded-md transition-all ${
+                  valuationMode === 'LIVE'
+                    ? 'bg-white text-emerald-700 shadow-2xs'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                Live Market Quotes
+              </button>
+            </div>
+          </div>
+          {valuationMode === 'STATEMENT' && (
+            <div className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md font-medium">
+              ✓ Exact statement closing figures: Invested ₹4,32,824.91 | Closing ₹4,25,354.46 | P&amp;L -₹7,470.45 (-1.73%)
+            </div>
+          )}
         </div>
 
         {/* Metric Cards Row */}

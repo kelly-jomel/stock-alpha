@@ -8,13 +8,16 @@ export interface PortfolioHolding {
   shares: number;
   averageBuyPrice: number;
   currentPrice: number;
+  closingPrice?: number;
   currency: string;
   sector: string;
   currentValue: number;
   investedValue: number;
+  closingValue?: number;
   unrealizedPnL: number;
   unrealizedPnLPercent: number;
   weightPercent: number;
+  asOfDate?: string;
   investorScores?: InvestorScores;
   technicals?: TechnicalIndicators;
 }
