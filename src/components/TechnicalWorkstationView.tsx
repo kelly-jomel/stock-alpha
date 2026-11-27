@@ -88,27 +88,39 @@ export default function TechnicalWorkstationView() {
     setTimeout(() => setNotificationMsg(null), 3000);
   };
 
-  // Fetch stock data
+  // Fetch stock data with Live Polling
   useEffect(() => {
     let isMounted = true;
-    async function loadData() {
-      setLoadingStock(true);
+    let isInitial = true;
+
+    async function loadData(silent = false) {
+      if (!silent) setLoadingStock(true);
       try {
-        const res = await fetch(`/api/stock?symbol=${selectedSymbol}&range=1y&interval=${selectedTimeframe}`);
+        const res = await fetch(`/api/stock?symbol=${selectedSymbol}&range=1y&interval=${selectedTimeframe}&_t=${Date.now()}`);
         if (res.ok && isMounted) {
           const json = await res.json();
-          setQuote(json.quote);
-          setCandles(json.candles || []);
-          setTechnicals(json.technicals);
+          if (json.quote) setQuote(json.quote);
+          if (json.candles) setCandles(json.candles);
+          if (json.technicals) setTechnicals(json.technicals);
         }
       } catch (e) {
         console.error(e);
       } finally {
-        if (isMounted) setLoadingStock(false);
+        if (isMounted && !silent) setLoadingStock(false);
       }
     }
-    loadData();
-    return () => { isMounted = false; };
+
+    loadData(false);
+
+    // Continuous 3-second live ticker & candle polling
+    const timer = setInterval(() => {
+      loadData(true);
+    }, 3000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(timer);
+    };
   }, [selectedSymbol, selectedTimeframe]);
 
   // Comprehensive Scanned Universe (Full algorithmic parity)

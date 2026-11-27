@@ -112,11 +112,13 @@ export default function TradingViewWorkstation() {
     });
   }, []);
 
-  // Fetch stock data
+  // Real-time Live Price Polling & Tick Stream (3s Interval)
   useEffect(() => {
     let isMounted = true;
-    async function fetchStock() {
-      setLoading(true);
+    let isInitial = true;
+
+    async function fetchStock(silent = false) {
+      if (!silent) setLoading(true);
       try {
         const intervalMap: Record<string, string> = {
           '1m': '1m',
@@ -126,23 +128,50 @@ export default function TradingViewWorkstation() {
           '1D': '1d',
           '1W': '1wk'
         };
-        const res = await fetch(`/api/stock?symbol=${encodeURIComponent(symbol)}&range=1y&interval=${intervalMap[selectedInterval] || '1d'}`);
+        const res = await fetch(`/api/stock?symbol=${encodeURIComponent(symbol)}&range=1y&interval=${intervalMap[selectedInterval] || '1d'}&_t=${Date.now()}`);
         if (res.ok && isMounted) {
           const data = await res.json();
-          setQuote(data.quote);
-          setCandles(data.candles || []);
-          setTechnicals(data.technicals);
-          setReplayIdx(-1);
-          setIsPlaying(false);
+          if (data.quote) setQuote(data.quote);
+          if (data.candles && data.candles.length > 0) {
+            setCandles(prev => {
+              // Smooth update to prevent chart flickering if identical
+              if (prev.length === 0 || prev.length !== data.candles.length) {
+                return data.candles;
+              }
+              const lastPrev = prev[prev.length - 1];
+              const lastNew = data.candles[data.candles.length - 1];
+              if (lastPrev.close !== lastNew.close || lastPrev.high !== lastNew.high) {
+                return data.candles;
+              }
+              return prev;
+            });
+          }
+          if (data.technicals) setTechnicals(data.technicals);
+          if (isInitial) {
+            setReplayIdx(-1);
+            setIsPlaying(false);
+            isInitial = false;
+          }
         }
       } catch (e) {
         console.error('Error fetching stock:', e);
       } finally {
-        if (isMounted) setLoading(false);
+        if (isMounted && !silent) setLoading(false);
       }
     }
-    fetchStock();
-    return () => { isMounted = false; };
+
+    // Initial fetch
+    fetchStock(false);
+
+    // Live continuous polling every 3 seconds for real-time market updates
+    const pollTimer = setInterval(() => {
+      fetchStock(true);
+    }, 3000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(pollTimer);
+    };
   }, [symbol, selectedInterval]);
 
   // Sliced candles for Replay
@@ -424,8 +453,14 @@ export default function TradingViewWorkstation() {
           </button>
         </div>
 
-        {/* Right: Broker Feed Connect, Cloud Sync, Snapshot, Share, Settings */}
+        {/* Right: Live Feed Indicator, Broker Feed Connect, Cloud Sync, Snapshot, Share, Settings */}
         <div className="flex items-center gap-2 shrink-0">
+          {/* Live Continuous Feed Indicator */}
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-emerald-950/60 border border-emerald-800/60 text-[10px] font-mono text-emerald-400 font-bold">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+            <span>LIVE (3s)</span>
+          </div>
+
           <button
             onClick={() => setIsBrokerModalOpen(true)}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold cursor-pointer transition-all"
