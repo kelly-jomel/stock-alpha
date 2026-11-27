@@ -12,6 +12,7 @@ import LiveTickerTape from '@/components/LiveTickerTape';
 import LandingPageView from '@/components/LandingPageView';
 import ProTerminalView from '@/components/ProTerminalView';
 import TechnicalWorkstationView from '@/components/TechnicalWorkstationView';
+import TradingViewWorkstation from '@/components/TradingViewWorkstation';
 import UnifiedPortfolioHub from '@/components/UnifiedPortfolioHub';
 import { StockQuote, Candle, TechnicalIndicators, InvestorScores } from '@/types/stock';
 import { STOCK_UNIVERSE } from '@/lib/stockData';
@@ -20,6 +21,7 @@ import {
   Sparkles,
   Wallet,
   LineChart,
+  BarChart2,
   Sliders,
   Search,
   Activity,
@@ -37,7 +39,7 @@ import {
 
 export default function Home() {
   const [selectedSymbol, setSelectedSymbol] = useState<string>('RELIANCE.NS');
-  const [activeTab, setActiveTab] = useState<'terminal_workstation' | 'explore' | 'portfolio' | 'screener' | 'terminal' | 'market-movers-all'>('terminal_workstation');
+  const [activeTab, setActiveTab] = useState<'tradingview' | 'terminal_workstation' | 'explore' | 'portfolio' | 'screener' | 'terminal' | 'market-movers-all'>('tradingview');
   const [loading, setLoading] = useState<boolean>(true);
   const [range, setRange] = useState<string>('1y');
   const [chartInterval, setChartInterval] = useState<string>('1d');
@@ -294,8 +296,19 @@ export default function Home() {
             )}
           </div>
 
-          {/* Clean 5-Pillar Modern Navigation */}
+          {/* Clean 6-Pillar Modern Navigation */}
           <nav className="flex items-center gap-1.5 text-xs font-semibold text-slate-300 shrink-0">
+            <button
+              onClick={() => setActiveTab('tradingview')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
+                activeTab === 'tradingview'
+                  ? 'bg-[#2962ff] text-white font-bold shadow-md'
+                  : 'hover:text-white hover:bg-slate-800 text-[#787b86]'
+              }`}
+            >
+              <BarChart2 className="w-3.5 h-3.5" />
+              <span>Chart Terminal</span>
+            </button>
             <button
               onClick={() => setActiveTab('terminal_workstation')}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
@@ -403,10 +416,17 @@ export default function Home() {
       <LiveTickerTape onSelectStock={handleSelectStock} />
 
       {/* Main Page Body */}
-      <main className="flex-1 w-full mx-auto p-2 sm:p-4">
-        {/* PAGE 0: Technical Terminal Workstation */}
+      <main className="flex-1 w-full mx-auto p-0">
+        {/* PAGE 0A: TradingView Full-Screen Charting Workstation with Broker Feed Connect */}
+        {activeTab === 'tradingview' && (
+          <TradingViewWorkstation />
+        )}
+
+        {/* PAGE 0B: Technical Terminal Workstation */}
         {activeTab === 'terminal_workstation' && (
-          <TechnicalWorkstationView />
+          <div className="p-2 sm:p-4 max-w-7xl mx-auto">
+            <TechnicalWorkstationView />
+          </div>
         )}
 
         {/* PAGE 1: Market Explore */}

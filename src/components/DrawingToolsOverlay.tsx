@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ChartDrawing } from '@/types/sync';
 import { cloudSync } from '@/lib/cloudSync';
 import {
@@ -13,20 +13,47 @@ import {
   X
 } from 'lucide-react';
 
-interface DrawingOverlayProps {
+export type DrawingTool = 'NONE' | 'HORIZONTAL_LINE' | 'TRENDLINE' | 'FIBONACCI' | 'cursor' | 'line' | 'fib' | 'text' | 'eraser' | 'trendline' | 'fibonacci' | 'horizontal';
+
+export interface DrawingOverlayProps {
   symbol: string;
-  minPrice: number;
-  maxPrice: number;
-  containerHeight: number;
+  minPrice?: number;
+  maxPrice?: number;
+  containerHeight?: number;
+  activeTool?: DrawingTool;
+  onDrawingComplete?: () => void;
+  hideToolbar?: boolean;
 }
 
 export default function DrawingToolsOverlay({
   symbol,
-  minPrice,
-  maxPrice,
-  containerHeight
+  minPrice = 0,
+  maxPrice = 1000,
+  containerHeight = 420,
+  activeTool: externalActiveTool,
+  onDrawingComplete,
+  hideToolbar = false
 }: DrawingOverlayProps) {
-  const [activeTool, setActiveTool] = useState<'NONE' | 'HORIZONTAL_LINE' | 'TRENDLINE' | 'FIBONACCI'>('NONE');
+  const [internalActiveTool, setInternalActiveTool] = useState<'NONE' | 'HORIZONTAL_LINE' | 'TRENDLINE' | 'FIBONACCI'>('NONE');
+
+  // Map external tool names (e.g., 'line', 'fib', 'HORIZONTAL_LINE') to internal mode
+  const activeTool = useMemo(() => {
+    if (externalActiveTool !== undefined) {
+      if (externalActiveTool === 'line' || externalActiveTool === 'trendline') return 'TRENDLINE';
+      if (externalActiveTool === 'fib' || externalActiveTool === 'fibonacci') return 'FIBONACCI';
+      if (externalActiveTool === 'horizontal' || externalActiveTool === 'HORIZONTAL_LINE') return 'HORIZONTAL_LINE';
+      if (externalActiveTool === 'cursor' || externalActiveTool === 'eraser' || externalActiveTool === 'text') return 'NONE';
+      return externalActiveTool as 'NONE' | 'HORIZONTAL_LINE' | 'TRENDLINE' | 'FIBONACCI';
+    }
+    return internalActiveTool;
+  }, [externalActiveTool, internalActiveTool]);
+
+  const setActiveTool = (tool: 'NONE' | 'HORIZONTAL_LINE' | 'TRENDLINE' | 'FIBONACCI') => {
+    setInternalActiveTool(tool);
+    if (tool === 'NONE' && onDrawingComplete) {
+      onDrawingComplete();
+    }
+  };
   const [drawings, setDrawings] = useState<ChartDrawing[]>([]);
   const [currentLineStart, setCurrentLineStart] = useState<{ xPercent: number; price: number } | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -114,7 +141,8 @@ export default function DrawingToolsOverlay({
   return (
     <>
       {/* Top Drawing Toolbar */}
-      <div className="flex items-center gap-1 bg-slate-50 border border-slate-200/90 rounded-xl px-2 py-1 text-xs">
+      {!hideToolbar && (
+        <div className="flex items-center gap-1 bg-slate-50 border border-slate-200/90 rounded-xl px-2 py-1 text-xs">
         <span className="text-slate-400 font-semibold text-[11px] mr-1 hidden sm:inline">Tools:</span>
         <button
           onClick={() => {
@@ -175,6 +203,7 @@ export default function DrawingToolsOverlay({
           </button>
         )}
       </div>
+      )}
 
       {/* SVG Canvas Overlay on Top of the Chart */}
       <div
